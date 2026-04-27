@@ -1,0 +1,3138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f0f11">
+<title>Chief / Assistant</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg: #0f0f11;
+  --surface: #18181c;
+  --surface2: #1f1f25;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --text: #f0eff4;
+  --muted: #7a7886;
+  --accent: #8b7cf8;
+  --accent2: #6ee7b7;
+  --accent3: #fbbf24;
+  --danger: #f87171;
+  --success: #6ee7b7;
+  --warning: #fbbf24;
+  --r: 10px;
+  --rl: 14px;
+  --font: 'DM Sans', sans-serif;
+  --mono: 'DM Mono', monospace;
+  --nav-h: 64px;
+  --top-h: 56px;
+}
+
+/* Light theme */
+body.light {
+  --bg: #f5f5f7;
+  --surface: #ffffff;
+  --surface2: #f0f0f2;
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.14);
+  --text: #1a1a2e;
+  --muted: #6b6880;
+  --accent: #6c5ce7;
+  --accent2: #00b894;
+  --accent3: #e17055;
+  --danger: #d63031;
+  --success: #00b894;
+  --warning: #e17055;
+}
+
+/* Theme toggle button */
+/* Light theme */
+body.light {
+  --bg: #f5f5f7;
+  --surface: #ffffff;
+  --surface2: #ebebef;
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.15);
+  --text: #1a1a2e;
+  --muted: #6b6880;
+  --accent: #6c5ce7;
+  --accent2: #00b894;
+  --accent3: #e17055;
+  --danger: #d63031;
+  --success: #00b894;
+  --warning: #d68910;
+}
+
+.theme-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid var(--border2); background: var(--surface2);
+  color: var(--text); cursor: pointer; display: flex; align-items: center;
+  justify-content: center; font-size: 14px; flex-shrink: 0;
+  transition: all 0.15s;
+}
+.theme-btn:hover { background: var(--border2); }
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html { height: 100%; }
+body { height: 100%; font-family: var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+
+/* ── APP SHELL ── */
+.app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
+
+/* ── TOP BAR ── */
+.topbar {
+  height: var(--top-h); flex-shrink: 0;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px; gap: 10px;
+}
+.topbar-left { flex: 1; min-width: 0; }
+.topbar-left h1 { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar-left p { font-size: 11px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ── SCROLL AREA ── */
+.content-area { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; padding: 16px; padding-bottom: calc(var(--nav-h) + 16px); }
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  height: var(--nav-h); flex-shrink: 0;
+  background: var(--surface); border-top: 1px solid var(--border);
+  display: flex; align-items: stretch;
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.nav-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 4px; cursor: pointer;
+  color: var(--muted); font-size: 10px; font-weight: 500;
+  border: none; background: transparent; padding: 8px 4px;
+  transition: color 0.15s; position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+.nav-item.active { color: var(--accent); }
+.nav-item.active::before {
+  content: ''; position: absolute; top: 0; left: 20%; right: 20%;
+  height: 2px; background: var(--accent); border-radius: 0 0 2px 2px;
+}
+.nav-icon { width: 20px; height: 20px; }
+.nav-badge {
+  position: absolute; top: 6px; right: calc(50% - 18px);
+  background: var(--danger); color: #fff; border-radius: 10px;
+  font-size: 9px; padding: 1px 4px; font-weight: 700; min-width: 14px; text-align: center;
+}
+.nav-badge.purple { background: var(--accent); }
+
+/* ── TAB PANELS ── */
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── BUTTONS ── */
+.btn {
+  padding: 8px 14px; border-radius: var(--r);
+  border: 1px solid var(--border2); background: transparent;
+  color: var(--text); font-size: 12px; font-family: var(--font);
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  font-weight: 500; transition: all 0.15s; white-space: nowrap;
+  min-height: 36px;
+}
+.btn:active { opacity: 0.8; transform: scale(0.97); }
+.btn-accent { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-sm { padding: 6px 12px; font-size: 11px; min-height: 30px; }
+.btn-full { width: 100%; justify-content: center; }
+.btn-danger { border-color: var(--danger); color: var(--danger); }
+
+/* ── CARDS ── */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--rl); padding: 16px; margin-bottom: 12px; }
+.card-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; }
+
+/* ── METRICS ── */
+.metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+.metric { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 12px; text-align: center; }
+.metric-val { font-size: 26px; font-weight: 600; font-family: var(--mono); line-height: 1; }
+.metric-val.danger { color: var(--danger); }
+.metric-val.warning { color: var(--warning); }
+.metric-val.success { color: var(--success); }
+.metric-lbl { font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+/* ── TASK ROWS ── */
+.task-row { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.task-row:last-child { border-bottom: none; }
+.task-name { flex: 1; line-height: 1.4; }
+.task-meta { font-size: 10px; color: var(--muted); font-family: var(--mono); white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot-red { background: var(--danger); box-shadow: 0 0 5px var(--danger); }
+.dot-amber { background: var(--warning); box-shadow: 0 0 5px var(--warning); }
+.dot-green { background: var(--success); box-shadow: 0 0 5px var(--success); }
+.dot-gray { background: var(--muted); }
+
+/* ── PILLS ── */
+.pill { display: inline-block; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+.pill-red { background: rgba(248,113,113,0.15); color: var(--danger); border: 1px solid rgba(248,113,113,0.3); }
+.pill-amber { background: rgba(251,191,36,0.12); color: var(--warning); border: 1px solid rgba(251,191,36,0.25); }
+.pill-green { background: rgba(110,231,183,0.12); color: var(--success); border: 1px solid rgba(110,231,183,0.25); }
+.pill-purple { background: rgba(139,124,248,0.15); color: var(--accent); border: 1px solid rgba(139,124,248,0.3); }
+.pill-gray { background: rgba(122,120,134,0.15); color: var(--muted); border: 1px solid rgba(122,120,134,0.25); }
+
+/* ── AI BOX ── */
+.ai-box { background: var(--surface2); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r); padding: 14px; margin-bottom: 12px; }
+.ai-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; font-weight: 600; }
+.ai-text { font-size: 13px; line-height: 1.7; color: var(--text); white-space: pre-wrap; }
+.ai-text.thinking { color: var(--muted); font-style: italic; }
+
+/* ── INPUTS ── */
+.input-row { display: flex; gap: 8px; margin-top: 10px; }
+.input-row input { flex: 1; }
+input.full, textarea.full, select.full {
+  width: 100%; padding: 10px 14px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: var(--r); color: var(--text);
+  font-size: 14px; font-family: var(--font); outline: none;
+  -webkit-appearance: none; appearance: none;
+  transition: border-color 0.15s;
+}
+input.full:focus, textarea.full:focus, select.full:focus { border-color: var(--accent); }
+textarea.full { resize: vertical; min-height: 90px; line-height: 1.6; }
+.input-row input {
+  flex: 1; padding: 10px 14px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: var(--r); color: var(--text); font-size: 14px;
+  font-family: var(--font); outline: none; -webkit-appearance: none;
+}
+.input-row input:focus { border-color: var(--accent); }
+
+/* ── FORM ── */
+.form-field { margin-bottom: 10px; }
+.form-field label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 5px; font-weight: 500; letter-spacing: 0.03em; }
+
+/* ── PROJECTS ── */
+.proj-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+.proj-row:last-child { border-bottom: none; }
+.proj-row:active { opacity: 0.7; }
+.proj-info { flex: 1; min-width: 0; }
+.proj-name { font-size: 13px; font-weight: 500; margin-bottom: 3px; }
+.proj-sub { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prog-wrap { width: 64px; flex-shrink: 0; }
+.prog-bar { height: 3px; background: var(--border2); border-radius: 2px; overflow: hidden; }
+.prog-fill { height: 3px; border-radius: 2px; background: var(--accent); }
+.prog-pct { font-size: 10px; color: var(--muted); font-family: var(--mono); margin-top: 3px; text-align: right; }
+
+/* ── SCHEDULE ── */
+.sched-row { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
+.sched-row:last-child { border-bottom: none; }
+.sched-time { font-size: 10px; color: var(--muted); font-family: var(--mono); width: 68px; flex-shrink: 0; padding-top: 9px; line-height: 1.3; }
+.sched-block { flex: 1; padding: 8px 10px; border-radius: var(--r); }
+.sched-meeting { background: rgba(139,124,248,0.12); border-left: 3px solid var(--accent); }
+.sched-action { background: rgba(110,231,183,0.08); border-left: 3px solid var(--accent2); }
+.sched-focus { background: rgba(251,191,36,0.08); border-left: 3px solid var(--accent3); }
+.sched-name { font-size: 12px; font-weight: 500; margin-bottom: 2px; }
+.sched-sub { font-size: 11px; color: var(--muted); }
+
+/* ── TRACKER ── */
+.tracker-row { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--border); }
+.tracker-row:last-child { border-bottom: none; }
+.tracker-info { flex: 1; min-width: 0; }
+.tracker-email { font-weight: 500; font-family: var(--mono); font-size: 11px; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tracker-last { font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── RECORDER ── */
+.rec-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.rec-title { font-size: 13px; font-weight: 600; }
+.rec-status { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); font-family: var(--mono); }
+.rec-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.rec-dot.recording { background: var(--danger); animation: pulse 1s infinite; }
+.rec-dot.paused { background: var(--warning); }
+@keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:0.3; } }
+
+.rec-controls { display: flex; align-items: center; gap: 12px; margin: 14px 0; justify-content: center; }
+.rec-btn {
+  width: 48px; height: 48px; border-radius: 50%;
+  border: 1px solid var(--border2); background: var(--surface);
+  color: var(--text); cursor: pointer; display: flex; align-items: center;
+  justify-content: center; font-size: 16px; transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.rec-btn:active { transform: scale(0.93); }
+.rec-btn.primary { background: var(--danger); border-color: var(--danger); width: 60px; height: 60px; font-size: 20px; }
+.rec-btn.primary.idle { background: var(--accent); border-color: var(--accent); }
+.rec-btn.stop { border-color: var(--danger); color: var(--danger); }
+.rec-btn:disabled { opacity: 0.3; pointer-events: none; }
+.rec-timer { font-family: var(--mono); font-size: 20px; font-weight: 500; min-width: 60px; text-align: center; }
+
+.transcript-area {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 12px;
+  min-height: 120px; max-height: 200px; overflow-y: auto;
+  font-size: 13px; line-height: 1.8; color: var(--text);
+  white-space: pre-wrap; margin-bottom: 10px;
+  -webkit-overflow-scrolling: touch;
+}
+.transcript-placeholder { color: var(--muted); font-style: italic; }
+.note-entry {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 12px;
+  min-height: 90px; max-height: 160px; overflow-y: auto;
+  font-size: 13px; line-height: 1.8; color: var(--text);
+  white-space: pre-wrap; margin-bottom: 10px;
+  outline: none; -webkit-overflow-scrolling: touch;
+}
+.note-entry:focus { border-color: var(--accent); }
+.note-entry[contenteditable=true]:empty::before { content: attr(data-placeholder); color: var(--muted); font-style: italic; pointer-events: none; }
+
+/* ── MINUTES ── */
+.minute-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+.minute-item:last-child { border-bottom: none; }
+.minute-item:active { opacity: 0.7; }
+.minute-icon { width: 36px; height: 36px; border-radius: 8px; background: rgba(139,124,248,0.12); display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.minute-info { flex: 1; min-width: 0; }
+.minute-title { font-size: 13px; font-weight: 500; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.minute-meta { font-size: 10px; color: var(--muted); }
+
+/* ── CONFIRM ── */
+.confirm-bar { font-size: 12px; color: var(--success); margin-top: 8px; display: none; }
+
+/* ── PROJECT CARDS ── */
+.proj-card {
+  border-radius: var(--rl); border: 1px solid var(--border);
+  padding: 14px 16px; margin-bottom: 10px; cursor: pointer;
+  transition: all 0.15s; position: relative; overflow: hidden;
+}
+.proj-card::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 4px; background: var(--proj-color, var(--accent));
+}
+.proj-card:hover { border-color: var(--border2); background: var(--surface2); }
+.proj-card.active { border-color: var(--proj-color, var(--accent)); background: var(--surface2); }
+.proj-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.proj-card-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.proj-card-name { font-size: 13px; font-weight: 600; flex: 1; }
+.proj-card-count { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+.proj-card-meta { font-size: 11px; color: var(--muted); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.proj-card-bar { height: 3px; background: var(--border2); border-radius: 2px; overflow: hidden; }
+.proj-card-fill { height: 3px; border-radius: 2px; background: var(--proj-color, var(--accent)); transition: width 0.4s; }
+
+/* ── PEOPLE CHIPS ── */
+.person-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 8px; border-radius: 20px; font-size: 11px;
+  background: var(--surface2); border: 1px solid var(--border2);
+  color: var(--text); white-space: nowrap;
+}
+.person-avatar {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700; flex-shrink: 0;
+}
+
+/* ── PROJECT EMAIL ROWS ── */
+.proj-email-row { padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+.proj-email-row:last-child { border-bottom: none; }
+.proj-email-subject { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 1px; }
+.proj-email-meta { font-size: 10px; color: var(--muted); }
+
+
+/* ── PROJECT FILTER BUTTONS ── */
+.proj-sf { transition: all 0.12s; }
+.proj-sf.on { background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important; }
+
+.conn-step { display:flex; gap:14px; padding:14px 0; border-bottom:1px solid var(--border); }
+.conn-step-num { width:26px; height:26px; border-radius:50%; background:var(--accent); color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+.conn-step-body { flex:1; min-width:0; }
+.conn-step-title { font-size:13px; font-weight:600; margin-bottom:4px; }
+.conn-step-desc { font-size:12px; color:var(--muted); line-height:1.6; }
+
+
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: calc(var(--nav-h) + 12px); left: 50%; transform: translateX(-50%);
+  background: var(--surface2); border: 1px solid var(--border2);
+  border-radius: var(--r); padding: 10px 18px;
+  font-size: 13px; color: var(--text); z-index: 999;
+  display: none; white-space: nowrap;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+.toast.show { display: block; animation: fadeup 0.2s ease; }
+@keyframes fadeup { from { opacity:0; transform: translateX(-50%) translateY(6px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+
+/* ── DESKTOP OVERRIDE ── */
+@media (min-width: 768px) {
+  .app { flex-direction: row; }
+  .bottom-nav { display: none; }
+  .sidebar {
+    width: 210px; flex-shrink: 0;
+    background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; height: 100vh;
+  }
+  .sidebar .logo { padding: 20px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+  .sidebar .logo span { color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; }
+  .sidebar .snav { padding: 10px 0; flex: 1; overflow-y: auto; }
+  .sidebar .snav-section { padding: 14px 20px 5px; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .sidebar .snav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 20px; font-size: 13px; font-weight: 400;
+    color: var(--muted); cursor: pointer; border-left: 2px solid transparent;
+    transition: all 0.15s; user-select: none; position: relative;
+  }
+  .sidebar .snav-item:hover { color: var(--text); background: var(--surface2); }
+  .sidebar .snav-item.active { color: var(--text); border-left-color: var(--accent); background: rgba(139,124,248,0.08); font-weight: 500; }
+  .sidebar .snav-item svg { width: 15px; height: 15px; opacity: 0.7; flex-shrink: 0; }
+  .sidebar .snav-item.active svg { opacity: 1; }
+  .sidebar .snav-badge { margin-left: auto; background: var(--accent); color: #fff; border-radius: 20px; font-size: 10px; padding: 1px 6px; font-weight: 600; }
+  .sidebar .snav-badge.red { background: var(--danger); }
+  .sidebar-footer { padding: 14px 20px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); font-family: var(--mono); }
+
+  .main-col { flex: 1; display: flex; flex-direction: column; min-width: 0; height: 100vh; overflow: hidden; }
+  .topbar { padding: 0 24px; flex-shrink: 0; }
+  /* Scrollable content area — natural browser scrollbar on right side */
+  .content-area {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 20px 24px 60px;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .metrics { grid-template-columns: repeat(4, 1fr); }
+}
+
+@media (max-width: 767px) {
+  .sidebar { display: none; }
+  .main-col { flex: 1; display: flex; flex-direction: column; min-width: 0; height: 100vh; overflow: hidden; }
+  .content-area { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 14px; padding-bottom: calc(var(--nav-h) + 20px); -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+  .two-col { display: block; }
+  .two-col > * + * { margin-top: 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── PIN LOCK SCREEN ── -->
+<div id="pin-screen" style="
+  position:fixed;inset:0;z-index:99999;
+  background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:var(--fn,'DM Sans',sans-serif);
+">
+  <div style="text-align:center;margin-bottom:32px">
+    <div style="font-size:28px;margin-bottom:10px">🔐</div>
+    <div style="font-size:18px;font-weight:600;color:var(--tx,#f0eff4);margin-bottom:6px">Chief / Assistant</div>
+    <div style="font-size:13px;color:var(--mu,#7a7886)">Enter your PIN to continue</div>
+  </div>
+
+  <!-- PIN dots display -->
+  <div id="pin-dots" style="display:flex;gap:14px;margin-bottom:28px">
+    <div class="pin-dot"></div>
+    <div class="pin-dot"></div>
+    <div class="pin-dot"></div>
+    <div class="pin-dot"></div>
+  </div>
+
+  <!-- Error message -->
+  <div id="pin-error" style="
+    font-size:12px;color:#f87171;margin-bottom:16px;
+    height:16px;transition:opacity 0.2s;opacity:0;
+  ">Incorrect PIN — try again</div>
+
+  <!-- Number pad -->
+  <div style="display:grid;grid-template-columns:repeat(3,72px);grid-template-rows:repeat(4,64px);gap:10px">
+    <button class="pin-btn" onclick="pinPress('1')">1</button>
+    <button class="pin-btn" onclick="pinPress('2')">2</button>
+    <button class="pin-btn" onclick="pinPress('3')">3</button>
+    <button class="pin-btn" onclick="pinPress('4')">4</button>
+    <button class="pin-btn" onclick="pinPress('5')">5</button>
+    <button class="pin-btn" onclick="pinPress('6')">6</button>
+    <button class="pin-btn" onclick="pinPress('7')">7</button>
+    <button class="pin-btn" onclick="pinPress('8')">8</button>
+    <button class="pin-btn" onclick="pinPress('9')">9</button>
+    <button class="pin-btn pin-btn-clear" onclick="pinClear()" style="font-size:11px;color:var(--mu,#7a7886)">Clear</button>
+    <button class="pin-btn" onclick="pinPress('0')">0</button>
+    <button class="pin-btn pin-btn-del" onclick="pinDelete()">⌫</button>
+  </div>
+
+  <!-- First time setup hint -->
+  <div id="pin-setup-hint" style="margin-top:24px;font-size:12px;color:var(--mu,#7a7886);text-align:center;max-width:260px;line-height:1.6"></div>
+</div>
+
+<style>
+.pin-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.2);
+  background: transparent;
+  transition: all 0.15s;
+}
+.pin-dot.filled {
+  background: var(--ac, #8b7cf8);
+  border-color: var(--ac, #8b7cf8);
+  transform: scale(1.1);
+}
+.pin-btn {
+  width: 72px; height: 64px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.06);
+  color: var(--tx, #f0eff4);
+  font-size: 22px; font-weight: 500;
+  font-family: var(--fn, 'DM Sans', sans-serif);
+  cursor: pointer;
+  transition: all 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.pin-btn:hover { background: rgba(255,255,255,0.12); }
+.pin-btn:active { transform: scale(0.93); background: rgba(139,124,248,0.3); }
+.pin-btn-clear, .pin-btn-del { font-size: 14px; }
+body.light .pin-btn {
+  border-color: rgba(0,0,0,0.1);
+  background: rgba(0,0,0,0.05);
+  color: #1a1a2e;
+}
+body.light .pin-dot { border-color: rgba(0,0,0,0.2); }
+</style>
+
+<script>
+// ── PIN configuration ──────────────────────────────────
+// Change this to your preferred PIN:
+const CORRECT_PIN = '1234';
+// Session duration in hours (how long before PIN is required again):
+const SESSION_HOURS = 8;
+
+const PIN_SESSION_KEY = 'chief_pin_ok';
+let pinEntry = '';
+
+function checkPinSession() {
+  try {
+    const stored = sessionStorage.getItem(PIN_SESSION_KEY);
+    if (!stored) return false;
+    const { ts } = JSON.parse(stored);
+    const elapsed = (Date.now() - ts) / 3600000;
+    return elapsed < SESSION_HOURS;
+  } catch { return false; }
+}
+
+function unlockApp() {
+  sessionStorage.setItem(PIN_SESSION_KEY, JSON.stringify({ ts: Date.now() }));
+  const ps = document.getElementById('pin-screen');
+  ps.style.opacity = '0';
+  ps.style.transition = 'opacity 0.3s';
+  setTimeout(() => ps.style.display = 'none', 300);
+}
+
+function pinPress(digit) {
+  if (pinEntry.length >= 4) return;
+  pinEntry += digit;
+  updatePinDots();
+  if (pinEntry.length === 4) {
+    setTimeout(checkPin, 120);
+  }
+}
+
+function pinDelete() {
+  pinEntry = pinEntry.slice(0, -1);
+  updatePinDots();
+}
+
+function pinClear() {
+  pinEntry = '';
+  updatePinDots();
+}
+
+function updatePinDots() {
+  document.querySelectorAll('.pin-dot').forEach((d, i) => {
+    d.classList.toggle('filled', i < pinEntry.length);
+  });
+}
+
+function checkPin() {
+  if (pinEntry === CORRECT_PIN) {
+    unlockApp();
+  } else {
+    // Wrong PIN — shake and clear
+    const err = document.getElementById('pin-error');
+    err.style.opacity = '1';
+    const dots = document.getElementById('pin-dots');
+    dots.style.animation = 'pinShake 0.4s ease';
+    setTimeout(() => {
+      dots.style.animation = '';
+      err.style.opacity = '0';
+      pinEntry = '';
+      updatePinDots();
+    }, 700);
+  }
+}
+
+// Keyboard support
+document.addEventListener('keydown', e => {
+  if (document.getElementById('pin-screen').style.display === 'none') return;
+  if (e.key >= '0' && e.key <= '9') pinPress(e.key);
+  else if (e.key === 'Backspace') pinDelete();
+  else if (e.key === 'Escape') pinClear();
+});
+
+// Check on load — if already unlocked this session, skip PIN
+window.addEventListener('DOMContentLoaded', () => {
+  if (checkPinSession()) {
+    document.getElementById('pin-screen').style.display = 'none';
+  } else {
+    document.getElementById('pin-setup-hint').textContent =
+      'Default PIN is 1234 — change it in the app code (search for CORRECT_PIN)';
+  }
+});
+</script>
+
+<style>
+@keyframes pinShake {
+  0%,100% { transform: translateX(0); }
+  20% { transform: translateX(-10px); }
+  40% { transform: translateX(10px); }
+  60% { transform: translateX(-8px); }
+  80% { transform: translateX(8px); }
+}
+</style>
+
+<div class="app">
+
+  <!-- Desktop sidebar (hidden on mobile) -->
+  <div class="sidebar">
+    <div class="logo">Chief <span>/ assistant</span></div>
+    <div class="snav">
+      <div class="snav-section">Overview</div>
+      <div class="snav-item active" onclick="showTab('dashboard',this,'s')">
+        <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg>
+        Dashboard
+      </div>
+      <div class="snav-section">Work</div>
+      <div class="snav-item" onclick="showTab('projects',this,'s')">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 3a1 1 0 011-1h10a1 1 0 010 2H3a1 1 0 01-1-1zm0 4a1 1 0 011-1h10a1 1 0 010 2H3a1 1 0 01-1-1zm0 4a1 1 0 011-1h6a1 1 0 010 2H3a1 1 0 01-1-1z"/></svg>
+        Projects <span class="snav-badge">4</span>
+      </div>
+      <div class="snav-item" onclick="showTab('schedule',this,'s')">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M11 1v1H5V1H3v1H2a1 1 0 00-1 1v11a1 1 0 001 1h12a1 1 0 001-1V3a1 1 0 00-1-1h-1V1h-2zm2 5H3V4h10v2z"/></svg>
+        Schedule
+      </div>
+      <div class="snav-section">Meetings</div>
+      <div class="snav-item" onclick="showTab('recorder',this,'s')">
+        <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="6" r="3"/><path d="M2 10a6 6 0 0012 0h-2a4 4 0 01-8 0H2zm6 4v2h-1v-2h1z"/></svg>
+        Live recorder
+      </div>
+      <div class="snav-item" onclick="showTab('minutes',this,'s')">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M14 2H2a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1V3a1 1 0 00-1-1zm-1 10H3V4h10v8zm-8-6h6v1H5zm0 2h6v1H5zm0 2h4v1H5z"/></svg>
+        Minutes library
+      </div>
+      <div class="snav-section">Email</div>
+      <div class="snav-item" onclick="showTab('tracker',this,'s')">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 3a1 1 0 011-1h12a1 1 0 011 1v1.5l-7 4L1 4.5V3zm0 3l7 4 7-4V13a1 1 0 01-1 1H2a1 1 0 01-1-1V6z"/></svg>
+        Email tracker <span class="snav-badge red">2</span>
+      </div>
+      <div class="snav-section">Settings</div>
+      <div class="snav-item" onclick="showTab('connections',this,'s')">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a2 2 0 012 2v1h2a1 1 0 011 1v8a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1h2V3a2 2 0 012-2zm0 1.5a.5.5 0 00-.5.5v1h1V3a.5.5 0 00-.5-.5zM8 8a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>
+        Connections <span class="snav-badge" id="conn-badge-s" style="background:var(--warning);display:none">!</span>
+      </div>
+      <div class="snav-item" onclick="showTab('settings',this,'s')">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 5a3 3 0 100 6A3 3 0 008 5zm-1 3a1 1 0 112 0 1 1 0 01-2 0zm-4.4-1.5l1.1-.4a5 5 0 00.4.9l-.7.9.7.7.9-.7a5 5 0 00.9.4l-.1 1.1h1l.4-1.1a5 5 0 00.9-.4l.9.7.7-.7-.7-.9a5 5 0 00.4-.9l1.1.4V7.5l-1.1-.4a5 5 0 00-.4-.9l.7-.9-.7-.7-.9.7a5 5 0 00-.9-.4l.1-1.1h-1L8 5a5 5 0 00-.9.4l-.9-.7-.7.7.7.9a5 5 0 00-.4.9l-1.1-.4v1z"/></svg>
+        Settings
+      </div>
+    </div>
+    <div class="sidebar-footer" id="sf-date"></div>
+  </div>
+
+  <!-- Main column -->
+  <div class="main-col">
+
+    <!-- Top bar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1 id="topbar-title">Dashboard</h1>
+        <p id="topbar-sub">Loading your day...</p>
+      </div>
+      <div class="topbar-actions" id="topbar-actions"></div>
+      <!-- Scroll controls + theme toggle always visible -->
+      <div style="display:flex;gap:6px;flex-shrink:0;margin-left:6px">
+        <button class="theme-btn" onclick="scrollContent(-300)" title="Scroll up">↑</button>
+        <button class="theme-btn" onclick="scrollContent(300)" title="Scroll down">↓</button>
+        <button class="theme-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle light/dark">🌙</button>
+      </div>
+    </div>
+
+    <!-- Scrollable content -->
+    <div class="content-area" id="main-content-area">
+
+      <!-- ── DASHBOARD ── -->
+      <div id="tab-dashboard" class="tab-panel active">
+        <div class="metrics">
+          <div class="metric" id="m-overdue" style="cursor:pointer"><div class="metric-val danger" id="mv-overdue">—</div><div class="metric-lbl" id="ml-overdue">Overdue tasks</div></div>
+          <div class="metric" id="m-week" style="cursor:pointer"><div class="metric-val warning" id="mv-week">—</div><div class="metric-lbl">Due this week</div></div>
+          <div class="metric" id="m-proj" style="cursor:pointer"><div class="metric-val" id="mv-proj">—</div><div class="metric-lbl">Active projects</div></div>
+          <div class="metric" id="m-email" style="cursor:pointer"><div class="metric-val success" id="mv-email">—</div><div class="metric-lbl" id="ml-email">Email replies due</div></div>
+        </div>
+
+        <div id="briefing-box" class="ai-box" style="display:none">
+          <div class="ai-label">★ AI briefing</div>
+          <div class="ai-text" id="briefing-text"></div>
+        </div>
+
+        <div class="two-col">
+          <div>
+            <div class="card">
+              <div class="card-title" id="urgent-title">Overdue & high priority <span class="pill pill-red" id="urgent-badge">—</span></div>
+              <div id="urgent-list"><div style="color:var(--muted);font-size:13px;font-style:italic;padding:8px 0">Connect Microsoft 365 to load your tasks →</div></div>
+            </div>
+            <div class="card">
+              <div class="card-title" id="inprog-title">In progress & due this week</div>
+              <div id="inprog-list"><div style="color:var(--muted);font-size:13px;font-style:italic;padding:8px 0">Connect Microsoft 365 to load your tasks →</div></div>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <div class="card-title">Ask your assistant</div>
+              <div class="ai-box" style="min-height:100px">
+                <div class="ai-label">Assistant</div>
+                <div class="ai-text thinking" id="dash-reply">Ask me anything about your tasks, projects, or day...</div>
+              </div>
+              <div class="input-row">
+                <input type="text" id="dash-input" placeholder="What's blocking Acme?..." onkeydown="if(event.key==='Enter')askDash()"/>
+                <button class="btn btn-accent" onclick="askDash()">Ask</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PROJECTS ── -->
+      <div id="tab-projects" class="tab-panel">
+
+        <!-- Loading state -->
+        <div id="proj-loading" class="card" style="text-align:center;padding:32px;display:none">
+          <div style="font-size:13px;color:var(--muted);font-style:italic">Loading your Outlook projects...</div>
+        </div>
+
+        <!-- Not connected prompt -->
+        <div id="proj-not-connected" class="card" style="text-align:center;padding:32px">
+          <div style="font-size:22px;margin-bottom:10px">📁</div>
+          <div style="font-size:14px;font-weight:600;margin-bottom:6px">Projects from your Outlook categories</div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6">Connect Microsoft 365 to automatically create a project for each of your Outlook category labels — with emails, people, and pending items pulled in dynamically.</div>
+          <button class="btn btn-accent" onclick="showTab('connections',null,'m')">Connect Microsoft 365 →</button>
+        </div>
+
+        <!-- Project list + detail (shown after load) -->
+        <div id="proj-content" style="display:none">
+
+          <!-- Search + filter bar -->
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+            <div style="flex:1;min-width:180px;position:relative">
+              <input type="text" id="proj-search" class="full" placeholder="🔍 Search projects..." oninput="filterProjects()" style="padding-left:12px;font-size:13px"/>
+            </div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap" id="proj-status-filters">
+              <button class="btn btn-sm proj-sf on" data-sf="all" onclick="setProjFilter('all',this)">All</button>
+              <button class="btn btn-sm proj-sf" data-sf="needs-attention" onclick="setProjFilter('needs-attention',this)" style="color:var(--danger)">Attention</button>
+              <button class="btn btn-sm proj-sf" data-sf="active" onclick="setProjFilter('active',this)">Active</button>
+              <button class="btn btn-sm proj-sf" data-sf="idle" onclick="setProjFilter('idle',this)">Idle</button>
+              <button class="btn btn-sm proj-sf" data-sf="parked" onclick="setProjFilter('parked',this)">Parked</button>
+            </div>
+          </div>
+
+          <div class="two-col">
+            <div>
+              <!-- Summary stats -->
+              <div id="proj-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px"></div>
+              <!-- Project list card -->
+              <div class="card">
+                <div class="card-title">
+                  Your projects
+                  <button class="btn btn-sm btn-accent" onclick="loadProjectsFromOutlook()">↻ Refresh</button>
+                </div>
+                <div id="proj-list"><!-- dynamically filled --></div>
+              </div>
+            </div>
+            <div>
+              <!-- Project detail panel -->
+              <div class="card" id="proj-detail" style="position:sticky;top:0">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                  <div id="proj-detail-colour" style="width:12px;height:12px;border-radius:50%;background:var(--accent);flex-shrink:0"></div>
+                  <div class="card-title" style="margin-bottom:0;flex:1" id="proj-detail-title">Select a project</div>
+                  <span id="proj-detail-status" class="pill pill-gray"></span>
+                </div>
+
+                <!-- Project overview section -->
+                <div id="proj-overview-section" style="display:none">
+
+                  <!-- 48hr overdue + deadline flags (populated dynamically) -->
+                  <div id="proj-flags" style="display:none;margin-bottom:12px"></div>
+
+                  <!-- People involved -->
+                  <div style="margin-bottom:12px">
+                    <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">People involved</div>
+                    <div id="proj-people" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+                  </div>
+
+                  <!-- Recent emails with status tabs -->
+                  <div style="margin-bottom:12px">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                      <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em">Emails</div>
+                      <div style="display:flex;gap:3px" id="email-filter-btns"></div>
+                    </div>
+                    <div id="proj-emails" style="font-size:12px"></div>
+                  </div>
+
+                  <!-- Pending / overdue tasks -->
+                  <div style="margin-bottom:12px">
+                    <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Pending & overdue tasks</div>
+                    <div id="proj-tasks"></div>
+                  </div>
+                </div>
+
+                <!-- Full project summary (collapsible) -->
+                <div id="proj-summary-section" style="display:none;margin-bottom:12px">
+                  <div class="ai-box" style="border-left-color:var(--success)">
+                    <div class="ai-label" style="color:var(--success)">★ Full project summary</div>
+                    <div class="ai-text thinking" id="proj-summary-text">Generating summary...</div>
+                  </div>
+                </div>
+
+                <!-- Action buttons — populated dynamically when project selected -->
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="proj-action-bar">
+                  <span style="font-size:12px;color:var(--muted);font-style:italic">Select a project to see actions</span>
+                </div>
+
+                <!-- AI quick summary -->
+                <div class="ai-box">
+                  <div class="ai-label">★ AI overview</div>
+                  <div class="ai-text thinking" id="proj-detail-text">Select a project to see AI-generated overview, next steps, blockers, and recommendations.</div>
+                </div>
+
+                <div class="input-row">
+                <input type="text" id="proj-input" placeholder="Ask a question, or tap Ask with no text for full summary..."/>
+                  <button class="btn btn-accent" onclick="askProj()">Ask</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SCHEDULE ── -->
+      <div id="tab-schedule" class="tab-panel">
+        <div class="two-col">
+          <div>
+            <!-- Real calendar — populated by loadMSCalendar() -->
+            <div class="card" id="sched-card">
+              <div class="card-title" id="sched-date-title">Your calendar</div>
+              <div id="sched-list">
+                <div style="color:var(--muted);font-size:13px;font-style:italic;padding:12px 0;text-align:center">Connect Microsoft 365 to load your real calendar →</div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <!-- Minute taker manager -->
+            <div class="card" id="minute-taker-card">
+              <div class="card-title">Minute taker</div>
+              <div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:12px">The minute taker is automatically added to all your scheduled and accepted meetings. Add names or emails below to include them by default.</div>
+
+              <!-- Current minute takers -->
+              <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:7px">Default minute takers</div>
+              <div id="mt-list" style="margin-bottom:12px">
+                <div style="color:var(--muted);font-size:13px;font-style:italic">No minute takers added yet.</div>
+              </div>
+
+              <!-- Add new -->
+              <div class="form-field"><label>Name</label><input class="full" type="text" id="mt-name" placeholder="e.g. Jane Smith"/></div>
+              <div class="form-field"><label>Email (optional)</label><input class="full" type="email" id="mt-email" placeholder="e.g. jane@company.com"/></div>
+              <button class="btn btn-accent btn-full" onclick="addMinuteTaker()">Add minute taker</button>
+              <div class="confirm-bar" id="mt-confirm"></div>
+
+              <!-- Per-meeting override -->
+              <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+                <div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Per-meeting override</div>
+                <div style="font-size:12px;color:var(--muted);margin-bottom:8px">To exclude the minute taker from a specific meeting, select it below:</div>
+                <select class="full" id="mt-exclude-meeting" style="margin-bottom:8px"><option value="">Select a meeting...</option></select>
+                <button class="btn btn-sm btn-danger" onclick="excludeMtFromMeeting()">Exclude from selected meeting</button>
+                <div id="mt-excluded-list" style="margin-top:8px;font-size:12px;color:var(--muted)"></div>
+              </div>
+            </div>
+
+            <!-- Schedule assistant -->
+            <div class="card">
+              <div class="card-title">Schedule assistant</div>
+              <div class="ai-box" style="min-height:90px">
+                <div class="ai-label">Recommendation</div>
+                <div class="ai-text thinking" id="sched-text">Tap "Optimise" in the toolbar or ask me anything about your schedule.</div>
+              </div>
+              <div class="input-row">
+                <input type="text" id="sched-input" placeholder="Reschedule, block focus time..." onkeydown="if(event.key==='Enter')askSched()"/>
+                <button class="btn btn-accent" onclick="askSched()">Ask</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── LIVE RECORDER ── -->
+      <div id="tab-recorder" class="tab-panel">
+        <div class="two-col">
+          <div>
+            <div class="card">
+              <div class="rec-header">
+                <div class="rec-title">Recording session</div>
+                <div class="rec-status"><div class="rec-dot" id="rec-dot"></div><span id="rec-status-text">Idle</span></div>
+              </div>
+              <div class="form-field"><label>Meeting title</label><input class="full" type="text" id="rec-title" placeholder="e.g. Product standup 20 Apr"/></div>
+              <div class="form-field"><label>Link to project</label>
+                <select class="full" id="rec-project"><option value="">General / Unassigned</option></select>
+              </div>
+              <div class="rec-controls">
+                <button class="rec-btn primary idle" id="btn-record" onclick="toggleRecord()" title="Record">&#9679;</button>
+                <button class="rec-btn" id="btn-pause" onclick="togglePause()" disabled title="Pause">&#9646;&#9646;</button>
+                <button class="rec-btn stop" id="btn-stop" onclick="stopRecord()" disabled title="Stop">&#9632;</button>
+                <div class="rec-timer" id="rec-timer">00:00</div>
+              </div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:6px;text-align:center" id="rec-lang-info">Microphone not active</div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em">Live transcript</div>
+              <div class="transcript-area" id="transcript-area"><span class="transcript-placeholder">Transcript appears here as you speak. Hit record to begin.</span></div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn btn-accent btn-sm" onclick="processRecording()" id="btn-process" disabled>★ Process & file</button>
+                <button class="btn btn-sm" onclick="copyTranscript()">Copy</button>
+                <button class="btn btn-sm" onclick="clearRecorder()">Clear</button>
+              </div>
+            </div>
+
+            <div class="card" id="rec-result-card" style="display:none">
+              <div class="card-title">Processed minutes</div>
+              <div class="ai-box"><div class="ai-label">Extracted</div><div class="ai-text" id="rec-result-text"></div></div>
+              <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+                <button class="btn btn-accent btn-sm" onclick="saveToLibrary()">Save to library</button>
+                <button class="btn btn-sm" onclick="document.getElementById('rec-result-card').style.display='none'">Dismiss</button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="card">
+              <div class="card-title">Live notes <span style="font-size:10px;color:var(--muted);font-weight:400">Type alongside recording</span></div>
+              <div class="note-entry" id="live-notes" contenteditable="true" data-placeholder="Type your own observations here. Flag action items with the buttons below..."></div>
+              <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+                <button class="btn btn-sm" onclick="addNoteStamp()">+ Timestamp</button>
+                <button class="btn btn-sm" onclick="addActionFlag()">▶ Flag action</button>
+              </div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em">Flagged items</div>
+              <div class="transcript-area" id="note-history" style="min-height:70px;max-height:120px"><span class="transcript-placeholder">Flagged actions appear here.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MINUTES LIBRARY ── -->
+      <div id="tab-minutes" class="tab-panel">
+        <div class="two-col">
+          <div>
+            <div class="card">
+              <div class="card-title">Recorded meetings</div>
+              <div id="minutes-library-list">
+                <div style="color:var(--muted);font-size:13px;font-style:italic;padding:12px 0">No meetings recorded yet. Use the Live recorder to capture and save meetings — they will appear here.</div>
+              </div>
+              <div id="new-minute-entry" style="display:none" class="minute-item">
+                <div class="minute-icon">🎙</div>
+                <div class="minute-info"><div class="minute-title" id="new-minute-title">New recording</div><div class="minute-meta" id="new-minute-meta">Just recorded</div></div>
+                <span class="pill pill-green">New</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="card" id="minute-detail">
+              <div class="card-title" id="minute-detail-title">Minute detail</div>
+              <div class="ai-box"><div class="ai-label">AI summary</div><div class="ai-text thinking" id="minute-detail-text">Tap a meeting to see full AI-processed minutes, action items, and decisions.</div></div>
+              <div class="input-row">
+                <input type="text" id="minute-input" placeholder="Ask about this meeting..." onkeydown="if(event.key==='Enter')askMinute()"/>
+                <button class="btn btn-accent" onclick="askMinute()">Ask</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── EMAIL TRACKER ── -->
+      <div id="tab-tracker" class="tab-panel">
+        <div class="two-col">
+          <div>
+            <div class="card" id="tracker-senders-card">
+              <div class="card-title">Your inbox <span class="pill pill-gray" id="tracker-badge">—</span></div>
+              <div id="tracker-list"><div style="color:var(--muted);font-size:13px;font-style:italic;padding:8px 0">Connect Microsoft 365 to load your inbox →</div></div>
+            </div>
+            <div class="card">
+              <div class="card-title">Add to watchlist</div>
+              <div class="form-field"><label>Email address</label><input class="full" type="email" id="tracker-email" placeholder="contact@company.com"/></div>
+              <div class="form-field"><label>Linked project</label>
+                <select class="full" id="tracker-proj"><option>No project</option></select>
+              </div>
+              <button class="btn btn-accent btn-full" onclick="addToWatchlist()">Add to watchlist</button>
+              <div class="confirm-bar" id="tracker-confirm"></div>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <div class="card-title">Email assistant</div>
+              <div class="ai-box" style="min-height:100px">
+                <div class="ai-label">Assistant</div>
+                <div class="ai-text thinking" id="tracker-reply">Ask me to summarise threads, draft replies, or flag what needs a response...</div>
+              </div>
+              <div class="input-row">
+                <input type="text" id="tracker-input" placeholder="Summarise Acme emails this week..." onkeydown="if(event.key==='Enter')askTracker()"/>
+                <button class="btn btn-accent" onclick="askTracker()">Ask</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CONNECTIONS ── -->
+      <div id="tab-connections" class="tab-panel">
+
+        <!-- MS365 banner -->
+        <div id="conn-ms-connected" style="display:none" class="card" style="border-color:rgba(110,231,183,0.3)">
+          <div style="display:flex;align-items:center;gap:14px">
+            <div style="width:42px;height:42px;border-radius:10px;background:#0078d4;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <svg width="22" height="22" viewBox="0 0 23 23" fill="none"><path fill="#f25022" d="M1 1h10v10H1z"/><path fill="#7fba00" d="M12 1h10v10H12z"/><path fill="#00a4ef" d="M1 12h10v10H1z"/><path fill="#ffb900" d="M12 12h10v10H12z"/></svg>
+            </div>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600" id="ms-user-name">Microsoft 365</div>
+              <div style="font-size:11px;color:var(--success);margin-top:2px">● Connected</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:1px" id="ms-user-email"></div>
+            </div>
+            <button class="btn btn-sm btn-danger" onclick="msSignOut()">Sign out</button>
+          </div>
+          <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-sm btn-accent" onclick="loadAllMSData()">↻ Refresh all data</button>
+            <button class="btn btn-sm" onclick="loadMSEmails()">Emails only</button>
+            <button class="btn btn-sm" onclick="loadMSCalendar()">Calendar only</button>
+            <button class="btn btn-sm" onclick="loadMSTasks()">Tasks only</button>
+          </div>
+        </div>
+
+        <!-- Setup card (shown when not connected) -->
+        <div id="conn-setup-card" class="card">
+          <div class="card-title">Connect your apps</div>
+          <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px">Connect Microsoft 365 to replace the demo data with your real emails, calendar events, and tasks. Your data never leaves your browser — it's fetched directly from Microsoft.</p>
+
+          <!-- Step 1 -->
+          <div class="conn-step">
+            <div class="conn-step-num" id="step1-num">1</div>
+            <div class="conn-step-body">
+              <div class="conn-step-title">Register a free Azure app</div>
+              <div class="conn-step-desc">Takes 5 minutes. Creates a secure bridge between this app and your Microsoft account.</div>
+              <a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/CreateApplicationBlade" target="_blank" class="btn btn-sm" style="margin-top:10px;text-decoration:none">Open Azure Portal ↗</a>
+              <div class="conn-step-detail" style="margin-top:10px;font-size:12px;color:var(--muted);line-height:1.7">
+                In Azure: <strong style="color:var(--text)">New registration</strong> → name it anything → set redirect URI type to <strong style="color:var(--text)">Single-page application (SPA)</strong> → enter <code style="background:var(--surface2);padding:1px 6px;border-radius:4px;font-family:var(--mono);font-size:11px">https://tourmaline-bavarois-9439d7.netlify.app</code> → click Register → copy the <strong style="color:var(--text)">Application (client) ID</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="conn-step">
+            <div class="conn-step-num">2</div>
+            <div class="conn-step-body">
+              <div class="conn-step-title">Add API permissions</div>
+              <div class="conn-step-desc">In your new app: API permissions → Add → Microsoft Graph → Delegated → add these:</div>
+              <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">
+                <span class="pill pill-purple">Mail.Read</span>
+                <span class="pill pill-purple">Mail.ReadWrite</span>
+                <span class="pill pill-purple">Calendars.Read</span>
+                <span class="pill pill-purple">Tasks.ReadWrite</span>
+                <span class="pill pill-purple">User.Read</span>
+              </div>
+              <div style="font-size:12px;color:var(--muted);margin-top:8px">Then click <strong style="color:var(--text)">Grant admin consent</strong> (or ask your IT admin)</div>
+            </div>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="conn-step" style="border-bottom:none;padding-bottom:0">
+            <div class="conn-step-num">3</div>
+            <div class="conn-step-body">
+              <div class="conn-step-title">Paste your Client ID and connect</div>
+              <div class="conn-step-desc">Paste the Application (client) ID from Step 1. Also make sure your Azure redirect URI is set to exactly:</div>
+              <div style="margin:8px 0;padding:8px 10px;background:var(--surface2);border-radius:var(--r);font-family:var(--mono);font-size:11px;color:var(--accent);word-break:break-all" id="redirect-uri-display">Loading...</div>
+              <div style="margin-top:10px">
+                <input class="full" type="text" id="ms-client-id" placeholder="e.g. a1b2c3d4-e5f6-7890-abcd-ef1234567890" style="font-family:var(--mono);font-size:12px"/>
+              </div>
+              <div style="margin-top:8px">
+                <input class="full" type="text" id="ms-tenant-id" placeholder="Tenant ID — leave blank to use 'common' (personal accounts)" style="font-family:var(--mono);font-size:12px"/>
+              </div>
+              <button class="btn btn-accent" style="margin-top:10px;width:100%;justify-content:center" onclick="msSignIn()">
+                <svg width="16" height="16" viewBox="0 0 23 23" fill="none" style="flex-shrink:0"><path fill="#f25022" d="M1 1h10v10H1z"/><path fill="#7fba00" d="M12 1h10v10H12z"/><path fill="#00a4ef" d="M1 12h10v10H1z"/><path fill="#ffb900" d="M12 12h10v10H12z"/></svg>
+                Sign in with Microsoft 365
+              </button>
+              <div id="ms-error" style="display:none;font-size:12px;color:var(--danger);margin-top:8px;padding:10px;background:rgba(248,113,113,0.1);border-radius:var(--r)"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live data card (shown after connect) -->
+        <div id="conn-data-card" style="display:none">
+          <div class="card">
+            <div class="card-title" id="conn-data-title">Your data</div>
+            <div id="conn-data-content" style="font-size:13px;line-height:1.8;color:var(--text)"></div>
+          </div>
+        </div>
+
+        <!-- Coming soon -->
+        <div class="card" style="opacity:0.5">
+          <div class="card-title">Coming soon</div>
+          <div class="task-row"><span class="dot dot-gray"></span><span class="task-name">Google Workspace (Gmail + Calendar)</span><span class="pill pill-gray">Soon</span></div>
+          <div class="task-row"><span class="dot dot-gray"></span><span class="task-name">Slack</span><span class="pill pill-gray">Soon</span></div>
+          <div class="task-row" style="border:none"><span class="dot dot-gray"></span><span class="task-name">Zoom / Teams meeting import</span><span class="pill pill-gray">Soon</span></div>
+        </div>
+
+      </div>
+
+      </div>
+
+      <!-- ── SETTINGS ── -->
+      <div id="tab-settings" class="tab-panel">
+
+        <!-- Category / Project manager -->
+        <div class="card">
+          <div class="card-title">
+            Project categories
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-sm" onclick="filterSettings('all')" id="sf-all" style="background:var(--accent);color:#fff;border-color:var(--accent)">All</button>
+              <button class="btn btn-sm" onclick="filterSettings('active')" id="sf-active">Active</button>
+              <button class="btn btn-sm" onclick="filterSettings('idle')" id="sf-idle">Idle</button>
+              <button class="btn btn-sm" onclick="filterSettings('parked')" id="sf-parked">Parked</button>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.6">
+            <strong style="color:var(--text)">Active</strong> — email activity in inbox/sent &nbsp;·&nbsp;
+            <strong style="color:var(--text)">Idle</strong> — no recent inbox/sent activity (auto-activates on new mail) &nbsp;·&nbsp;
+            <strong style="color:var(--text)">Parked</strong> — manually paused, won't auto-activate
+          </div>
+          <div id="settings-cat-list">
+            <div style="color:var(--muted);font-size:13px;font-style:italic">Connect Microsoft 365 and sync projects to manage categories here.</div>
+          </div>
+        </div>
+
+        <!-- My domains (for filtering people) -->
+        <div class="card">
+          <div class="card-title">My email domains (hidden from people lists)</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6">Emails from these domains are your internal team — they won't appear in project people lists. Only third-party contacts will show.</div>
+          <div id="domain-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+          <div style="display:flex;gap:8px">
+            <input class="full" type="text" id="new-domain" placeholder="e.g. yourcompany.com" style="font-family:var(--mono);font-size:12px"/>
+            <button class="btn btn-accent btn-sm" onclick="addDomain()">Add</button>
+          </div>
+        </div>
+
+        <!-- Create project manually -->
+        <div class="card">
+          <div class="card-title">Create project manually</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">Create a project not linked to an Outlook category — useful for tracking work that doesn't have emails yet.</div>
+          <div class="form-field"><label>Project name</label><input class="full" type="text" id="new-proj-name" placeholder="e.g. Website redesign"/></div>
+          <div class="form-field"><label>Description / overview</label><textarea class="full" id="new-proj-desc" placeholder="What is this project about?" style="min-height:60px"></textarea></div>
+          <div class="form-field"><label>Status</label>
+            <select class="full" id="new-proj-status">
+              <option value="active">Active</option>
+              <option value="idle">Idle</option>
+              <option value="parked">Parked</option>
+            </select>
+          </div>
+          <button class="btn btn-accent" onclick="createManualProject()">Create project</button>
+          <div id="new-proj-confirm" class="confirm-bar"></div>
+        </div>
+
+      </div>
+
+    </div><!-- end content-area -->
+  </div><!-- end main-col -->
+
+  <!-- Mobile bottom nav -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" onclick="showTab('dashboard',this,'m')">
+      <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg>
+      Home
+      <span class="nav-badge purple" style="display:none" id="nb-dash"></span>
+    </button>
+    <button class="nav-item" onclick="showTab('projects',this,'m')">
+      <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a1 1 0 011-1h12a1 1 0 010 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 010 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h8a1 1 0 010 2H4a1 1 0 01-1-1z"/></svg>
+      Projects
+    </button>
+    <button class="nav-item" onclick="showTab('recorder',this,'m')" style="position:relative">
+      <div style="width:44px;height:44px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;position:absolute;top:-14px;left:50%;transform:translateX(-50%);border:3px solid var(--bg)">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="white"><circle cx="10" cy="8" r="4"/><path d="M3 13a7 7 0 0014 0h-2.5a4.5 4.5 0 01-9 0H3zm7 5v2H9v-2h1z"/></svg>
+      </div>
+      <span style="margin-top:20px;font-size:10px;color:var(--muted)">Record</span>
+    </button>
+    <button class="nav-item" onclick="showTab('minutes',this,'m')">
+      <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M17 3H3a1 1 0 00-1 1v12a1 1 0 001 1h14a1 1 0 001-1V4a1 1 0 00-1-1zm-1 12H4V5h12v10zM6 8h8v1.5H6zm0 3h8v1.5H6zm0 3h5v1.5H6z"/></svg>
+      Minutes
+    </button>
+    <button class="nav-item" onclick="showTab('tracker',this,'m')">
+      <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M2 4a1 1 0 011-1h14a1 1 0 011 1v2L10 11 2 6V4zm0 4l8 5 8-5v7a1 1 0 01-1 1H3a1 1 0 01-1-1V8z"/></svg>
+      Email
+      <span class="nav-badge" style="background:var(--danger)">2</span>
+    </button>
+    <button class="nav-item" onclick="showTab('connections',this,'m')">
+      <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a3 3 0 013 3v1h2a1 1 0 011 1v9a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h2V5a3 3 0 013-3zm0 1.5a1.5 1.5 0 00-1.5 1.5v1h3V5A1.5 1.5 0 0010 3.5zm0 6a2 2 0 100 4 2 2 0 000-4z"/></svg>
+      Connect
+      <span class="nav-badge" id="conn-badge-m" style="background:var(--warning)">!</span>
+    </button>
+    <button class="nav-item" onclick="showTab('settings',this,'m')">
+      <svg class="nav-icon" viewBox="0 0 20 20" fill="currentColor"><path d="M10 6a4 4 0 100 8 4 4 0 000-8zm-1 4a1 1 0 112 0 1 1 0 01-2 0zM3.3 9l1.4-.5a6 6 0 00.5 1.1l-.9 1.1.9.9 1.1-.9a6 6 0 001.1.5L7 12.7h1.3l.5-1.4a6 6 0 001.1-.5l1.1.9.9-.9-.9-1.1a6 6 0 00.5-1.1l1.4.5V7.7l-1.4-.5a6 6 0 00-.5-1.1l.9-1.1-.9-.9-1.1.9a6 6 0 00-1.1-.5L10.7 3H9.3l-.5 1.4a6 6 0 00-1.1.5L6.6 4l-.9.9.9 1.1a6 6 0 00-.5 1.1L4.7 7.7V9z"/></svg>
+      Settings
+    </button>
+  </nav>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const CLAUDE = "claude-sonnet-4-20250514";
+let currentProj = "";
+let openMinuteTitle = "";
+let recState = "idle";
+let recSeconds = 0;
+let recInterval = null;
+let recognition = null;
+let fullTranscript = "";
+
+// ── Init ──
+const now = new Date();
+document.getElementById('sf-date').textContent = now.toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+
+const titles = {
+  dashboard: ['Good morning', now.toLocaleDateString('en-ZA',{weekday:'long'}) + ' · 3 urgent items'],
+  projects: ['Projects', '4 active · tap any project'],
+  schedule: ['Schedule', 'Today · meetings + actions'],
+  recorder: ['Live recorder', 'Record, transcribe & note'],
+  minutes: ['Minutes library', 'All processed meetings'],
+  tracker: ['Email tracker', 'Watch senders & replies'],
+  connections: ['Connections', 'Connect your apps & accounts'],
+  settings: ['Settings', 'Manage projects, categories & domains']
+};
+const actions = {
+  dashboard: '<button class="btn btn-accent" onclick="getAIBriefing()" style="font-size:12px">★ Briefing</button>',
+  schedule: '<button class="btn btn-accent" onclick="optimiseDay()" style="font-size:12px">★ Optimise</button>',
+  projects: '<button class="btn btn-accent" onclick="loadProjectsFromOutlook()" style="font-size:12px">↻ Sync Outlook</button>',
+  recorder: '<button class="btn" onclick="clearRecorder()" style="font-size:12px">Clear</button>',
+  minutes: '',
+  tracker: ''
+};
+
+function showTab(name, el, src) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById('tab-' + name);
+  if (!panel) return;
+  panel.classList.add('active');
+
+  // sync both navs
+  document.querySelectorAll('.snav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.bottom-nav .nav-item').forEach(n => n.classList.remove('active'));
+  if (el) {
+    try { el.classList.add('active'); } catch(e) {}
+    if (src === 's') {
+      const idx = ['dashboard','projects','recorder','minutes','tracker'].indexOf(name);
+      if (idx >= 0) document.querySelectorAll('.bottom-nav .nav-item')[idx]?.classList.add('active');
+    } else {
+      const sItems = document.querySelectorAll('.snav-item');
+      const map = {dashboard:0,projects:1,schedule:2,recorder:3,minutes:4,tracker:5,connections:6,settings:7};
+      if (map[name] !== undefined) sItems[map[name]]?.classList.add('active');
+    }
+  }
+
+  // update topbar
+  if (titles[name]) {
+    document.getElementById('topbar-title').textContent = titles[name][0];
+    document.getElementById('topbar-sub').textContent = titles[name][1];
+  }
+  document.getElementById('topbar-actions').innerHTML = actions[name] || '';
+
+  // scroll to top
+  const ca = document.getElementById('main-content-area') || document.querySelector('.content-area');
+  if (ca) ca.scrollTop = 0;
+
+  // Render settings list on open
+  if (name === 'settings') { renderSettingsCategoryList(); renderDomainList(); }
+  if (name === 'dashboard') { initDashMetrics(); }
+}
+
+// ── Toast ──
+function toast(msg, dur=3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+// ── Claude API ──
+async function callClaude(prompt, elId, showElId) {
+  const el = document.getElementById(elId);
+  if (!el) { console.warn('callClaude: element not found:', elId); return; }
+  if (showElId) {
+    const se = document.getElementById(showElId);
+    if (se) se.style.display = 'block';
+  }
+  el.classList.add('thinking');
+  el.textContent = 'Thinking...';
+  try {
+    // Call through Netlify serverless proxy — keeps API key secure on server
+    const res = await fetch('/.netlify/functions/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: CLAUDE,
+        max_tokens: 1500,
+        system: 'You are a sharp, efficient personal executive assistant. Be concise and action-oriented. Use short bullet points. Today is ' + now.toDateString() + '.',
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      throw new Error(`Proxy ${res.status}: ${err.substring(0, 200)}`);
+    }
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    el.classList.remove('thinking');
+    el.style.whiteSpace = 'pre-wrap';
+    el.textContent = data.content?.[0]?.text || 'No response received.';
+  } catch(e) {
+    el.classList.remove('thinking');
+    el.textContent = '⚠ ' + (e.message || 'Could not reach AI.');
+    console.error('callClaude error:', e);
+  }
+}
+
+// ── Dashboard ──
+function getAIBriefing() {
+  if (!window._taskContext && !window._emailContext && !window._calContext) {
+    const el = document.getElementById('briefing-text');
+    const box = document.getElementById('briefing-box');
+    if (box) box.style.display = 'block';
+    if (el) { el.className = 'ai-text'; el.textContent = 'Connect Microsoft 365 first to get a personalised briefing based on your real tasks, emails, and calendar.'; }
+    return;
+  }
+  const taskCtx = window._taskContext ? `Your tasks:\n${window._taskContext}` : '';
+  const calCtx = window._calContext ? `Calendar: ${window._calContext}` : '';
+  const emailCtx = window._emailContext ? `Recent emails:\n${window._emailContext}` : '';
+  callClaude(
+    `Executive morning briefing based on real data.\n${taskCtx}\n${calCtx}\n${emailCtx}\n\nGive 5 punchy bullet points: top priority, scheduling tip, biggest risk, one to delegate, one quick win. Be specific — reference actual tasks and emails.`,
+    'briefing-text', 'briefing-box'
+  );
+}
+
+function askDash() {
+  const q = document.getElementById('dash-input').value.trim();
+  if (!q) return;
+  const taskCtx = window._taskContext ? `\nYour tasks:\n${window._taskContext}` : '';
+  const emailCtx = window._emailContext ? `\nYour emails:\n${window._emailContext}` : '';
+  const calCtx = window._calContext ? `\nYour calendar: ${window._calContext}` : '';
+  const context = taskCtx || emailCtx || calCtx
+    ? `Context:${taskCtx}${emailCtx}${calCtx}`
+    : 'No Microsoft 365 data loaded yet.';
+  callClaude(`${context}\n\nQuestion: ${q}`, 'dash-reply', null);
+  document.getElementById('dash-input').value = '';
+}
+
+// ── PROJECTS — Outlook category engine (v2) ────────────
+let _projects = {};
+let _currentProjName = '';
+let _manualStatus = {}; // stores user overrides: { catName: 'active'|'quiet' }
+let _excludedCategories = new Set(); // person-name categories excluded by user
+// Persist overrides in sessionStorage
+function saveManualStatus() { sessionStorage.setItem('proj_manual_status', JSON.stringify(_manualStatus)); sessionStorage.setItem('proj_excluded', JSON.stringify([..._excludedCategories])); }
+function loadManualStatus() {
+  try { _manualStatus = JSON.parse(sessionStorage.getItem('proj_manual_status')||'{}'); } catch { _manualStatus = {}; }
+  try { _excludedCategories = new Set(JSON.parse(sessionStorage.getItem('proj_excluded')||'[]')); } catch { _excludedCategories = new Set(); }
+}
+
+const OUTLOOK_COLOURS = {
+  'preset0':'#e74856','preset1':'#ff8c00','preset2':'#f7630c',
+  'preset3':'#ca5010','preset4':'#da3b01','preset5':'#ef6950',
+  'preset6':'#d13438','preset7':'#ff4343','preset8':'#e3008c',
+  'preset9':'#bf0077','preset10':'#c239b3','preset11':'#9a0089',
+  'preset12':'#0078d4','preset13':'#0063b1','preset14':'#8764b8',
+  'preset15':'#744da9','preset16':'#b146c2','preset17':'#881798',
+  'preset18':'#0099bc','preset19':'#2d7d9a','preset20':'#00b7c3',
+  'preset21':'#038387','preset22':'#00b294','preset23':'#018574',
+  'preset24':'#00cc6a','preset25':'#10893e','none':'#8b7cf8'
+};
+function categoryColour(c) { return OUTLOOK_COLOURS[c] || OUTLOOK_COLOURS['none']; }
+
+// Detect if a category name looks like a person's name (2 words, title case, no numbers)
+function looksLikePerson(name) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2 || parts.length > 3) return false;
+  return parts.every(p => /^[A-Z][a-z]+$/.test(p));
+}
+
+async function loadProjectsFromOutlook() {
+  if (!await ensureToken()) {
+    document.getElementById('proj-not-connected').style.display = 'block';
+    return;
+  }
+  loadManualStatus();
+  document.getElementById('proj-not-connected').style.display = 'none';
+  document.getElementById('proj-content').style.display = 'none';
+  document.getElementById('proj-loading').style.display = 'block';
+  document.getElementById('proj-loading').innerHTML = '<div style="font-size:13px;color:var(--muted);padding:24px;text-align:center">Step 1/3 — Fetching your Outlook categories...</div>';
+
+  try {
+    // ── STEP 1: Get all master categories ──
+    const catData = await msGraphGet('https://graph.microsoft.com/v1.0/me/outlook/masterCategories');
+    const allCategories = catData.value || [];
+
+    if (allCategories.length === 0) {
+      document.getElementById('proj-loading').style.display = 'none';
+      document.getElementById('proj-not-connected').style.display = 'block';
+      document.getElementById('proj-not-connected').innerHTML = `<div style="font-size:22px;margin-bottom:10px">📭</div><div style="font-size:14px;font-weight:600;margin-bottom:6px">No Outlook categories found</div><div style="font-size:13px;color:var(--muted);line-height:1.6">Right-click any email in Outlook → Categorize → Manage Categories to create project categories.</div>`;
+      return;
+    }
+
+    // Filter out person-named categories (unless user has explicitly kept them)
+    const projectCategories = allCategories.filter(c => !_excludedCategories.has(c.displayName));
+
+    document.getElementById('proj-loading').innerHTML = `<div style="font-size:13px;color:var(--muted);padding:24px;text-align:center">Step 2/3 — Scanning all folders for ${projectCategories.length} categories...<br><span style="font-size:11px">This may take a moment</span></div>`;
+
+    // ── STEP 2: Fetch categorised emails from INBOX + SENT + ALL FOLDERS ──
+    // Use search across all folders — more reliable than $filter per category
+    const emailsByCategory = {};
+    projectCategories.forEach(c => { emailsByCategory[c.displayName] = []; });
+
+    // Fetch from inbox (receivedDateTime desc)
+    const fetchFolder = async (folderId) => {
+      let url = `https://graph.microsoft.com/v1.0/me/${folderId}/messages?$top=100&$select=subject,from,toRecipients,ccRecipients,receivedDateTime,sentDateTime,isRead,bodyPreview,categories,parentFolderId&$orderby=receivedDateTime desc`;
+      let pages = 0;
+      while (url && pages < 3) { // up to 300 emails per folder
+        const data = await msGraphGet(url);
+        (data.value||[]).forEach(email => {
+          (email.categories||[]).forEach(cat => {
+            if (emailsByCategory[cat] !== undefined) {
+              emailsByCategory[cat].push(email);
+            }
+          });
+        });
+        url = data['@odata.nextLink'] || null;
+        pages++;
+      }
+    };
+
+    // Fetch inbox and sent items in parallel, then search all mail
+    await Promise.all([
+      fetchFolder('mailFolders/inbox/messages').catch(()=>{}),
+      fetchFolder('mailFolders/sentitems/messages').catch(()=>{}),
+    ]);
+
+    // Also do a broad fetch of recent mail across all folders for anything missed
+    try {
+      let url = `https://graph.microsoft.com/v1.0/me/messages?$top=200&$select=subject,from,toRecipients,ccRecipients,receivedDateTime,isRead,bodyPreview,categories,conversationId&$orderby=receivedDateTime desc`;
+      const data = await msGraphGet(url);
+      (data.value||[]).forEach(email => {
+        (email.categories||[]).forEach(cat => {
+          if (emailsByCategory[cat] !== undefined) {
+            // deduplicate by id — add only if not already there
+            const existing = emailsByCategory[cat];
+            if (!existing.find(e => e.subject === email.subject && e.receivedDateTime === email.receivedDateTime)) {
+              existing.push(email);
+            }
+          }
+        });
+      });
+    } catch {}
+
+    document.getElementById('proj-loading').innerHTML = `<div style="font-size:13px;color:var(--muted);padding:24px;text-align:center">Step 3/3 — Building projects...</div>`;
+
+    // ── STEP 3: Build project objects ──
+    const inboxSentCategories = new Set();
+    Object.entries(emailsByCategory).forEach(([cat, emails]) => {
+      if (emails.length > 0) inboxSentCategories.add(cat);
+    });
+
+    _projects = {};
+    for (const cat of projectCategories) {
+      const name = cat.displayName;
+      const emails = emailsByCategory[name] || [];
+
+      // Sort by date desc
+      emails.sort((a,b) => new Date(b.receivedDateTime||0) - new Date(a.receivedDateTime||0));
+
+      // People map
+      const peopleMap = {};
+      emails.forEach(e => {
+        const addP = p => {
+          const addr = p?.emailAddress?.address?.toLowerCase();
+          if (addr && !peopleMap[addr]) peopleMap[addr] = p.emailAddress.name || addr;
+        };
+        addP(e.from);
+        (e.toRecipients||[]).forEach(addP);
+        (e.ccRecipients||[]).forEach(addP);
+      });
+
+      const unread = emails.filter(e => !e.isRead).length;
+      const latest = emails[0] ? new Date(emails[0].receivedDateTime) : null;
+      const daysSince = latest ? Math.floor((Date.now()-latest)/86400000) : 999;
+      const isInInboxOrSent = inboxSentCategories.has(name);
+
+      // Status logic:
+      // 1. Manual override wins
+      // 2. If emails exist in inbox/sent → active/needs-attention
+      // 3. If no emails in inbox/sent → quiet
+      let autoStatus;
+      if (emails.length === 0 || !isInInboxOrSent) {
+        autoStatus = 'quiet';
+      } else if (unread > 3) {
+        autoStatus = 'needs-attention';
+      } else if (daysSince <= 7) {
+        autoStatus = 'active';
+      } else {
+        autoStatus = 'on-track';
+      }
+
+      const status = _manualStatus[name] || autoStatus;
+      const isPerson = looksLikePerson(name);
+
+      _projects[name] = {
+        name, colour: categoryColour(cat.color), colorName: cat.color,
+        emails, people: peopleMap, unread,
+        total: emails.length, latest, daysSince,
+        status, autoStatus, isInInboxOrSent, isPerson,
+        tasks: []
+      };
+    }
+
+    // ── STEP 4: Match tasks by category ──
+    try {
+      const lists = await msGraphGet('https://graph.microsoft.com/v1.0/me/todo/lists');
+      for (const list of (lists.value||[]).slice(0,5)) {
+        try {
+          const tasks = await msGraphGet(`https://graph.microsoft.com/v1.0/me/todo/lists/${list.id}/tasks?$filter=status ne 'completed'&$top=100&$select=title,dueDateTime,importance,categories`);
+          (tasks.value||[]).forEach(t => {
+            (t.categories||[]).forEach(cat => {
+              if (_projects[cat]) _projects[cat].tasks.push({...t, _listName: list.displayName});
+            });
+          });
+        } catch {}
+      }
+    } catch {}
+
+    renderProjectList();
+    document.getElementById('proj-loading').style.display = 'none';
+    document.getElementById('proj-content').style.display = 'block';
+
+    const count = Object.keys(_projects).length;
+    const personCount = Object.values(_projects).filter(p=>p.isPerson).length;
+    toast(`✓ ${count} categories synced${personCount>0?' · '+personCount+' look like names — check Exclude list':''}`);
+
+  } catch(e) {
+    document.getElementById('proj-loading').style.display = 'none';
+    document.getElementById('proj-not-connected').style.display = 'block';
+    document.getElementById('proj-not-connected').innerHTML = `<div style="color:var(--danger);font-size:13px;padding:16px">Error: ${escHtml(e.message)}<br><br><button class="btn btn-sm" onclick="loadProjectsFromOutlook()">Retry</button></div>`;
+  }
+}
+
+// ── Project search & filter state ────────────────────────
+let _projStatusFilter = 'all';
+let _projSearchQuery = '';
+
+function setProjFilter(status, el) {
+  _projStatusFilter = status;
+  document.querySelectorAll('.proj-sf').forEach(b => b.classList.remove('on'));
+  if (el) el.classList.add('on');
+  renderProjectList();
+}
+
+function filterProjects() {
+  _projSearchQuery = (document.getElementById('proj-search')?.value || '').toLowerCase().trim();
+  renderProjectList();
+}
+
+function renderProjectList() {
+  const list = document.getElementById('proj-list');
+  if (!list) return;
+  let projects = Object.values(_projects).filter(p => !_excludedCategories.has(p.name));
+
+  // Status filter
+  if (_projStatusFilter !== 'all') {
+    projects = projects.filter(p => {
+      const s = p.status || 'idle';
+      if (_projStatusFilter === 'needs-attention') return s === 'needs-attention';
+      if (_projStatusFilter === 'active') return ['active','on-track'].includes(s);
+      if (_projStatusFilter === 'idle') return ['idle','quiet'].includes(s);
+      if (_projStatusFilter === 'parked') return s === 'parked';
+      return true;
+    });
+  }
+
+  // Search filter
+  if (_projSearchQuery) {
+    projects = projects.filter(p =>
+      p.name.toLowerCase().includes(_projSearchQuery) ||
+      p.emails.slice(0,5).some(e => (e.subject||'').toLowerCase().includes(_projSearchQuery))
+    );
+  }
+
+  const all = Object.values(_projects).filter(p => !_excludedCategories.has(p.name));
+  const needsAttn = all.filter(p=>p.status==='needs-attention').length;
+  const active = all.filter(p=>['active','on-track'].includes(p.status)).length;
+  const quiet = all.filter(p=>['idle','quiet','parked'].includes(p.status)).length;
+
+  document.getElementById('proj-stats').innerHTML = `
+    <div class="metric" style="cursor:pointer" onclick="setProjFilter('needs-attention',document.querySelector('[data-sf=needs-attention]'))">
+      <div class="metric-val danger" style="font-size:20px">${needsAttn}</div><div class="metric-lbl">Needs attention</div></div>
+    <div class="metric" style="cursor:pointer" onclick="setProjFilter('active',document.querySelector('[data-sf=active]'))">
+      <div class="metric-val success" style="font-size:20px">${active}</div><div class="metric-lbl">Active</div></div>
+    <div class="metric" style="cursor:pointer" onclick="setProjFilter('idle',document.querySelector('[data-sf=idle]'))">
+      <div class="metric-val" style="font-size:20px">${quiet}</div><div class="metric-lbl">Idle / Parked</div></div>`;
+
+  projects.sort((a,b) => {
+    const order = {'needs-attention':0,'active':1,'on-track':2,'idle':3,'quiet':3,'parked':4};
+    return (order[a.status]||2)-(order[b.status]||2) || a.daysSince-b.daysSince;
+  });
+
+  if (projects.length === 0) {
+    list.innerHTML = `<div style="color:var(--muted);font-size:13px;padding:12px 0">${_projSearchQuery || _projStatusFilter !== 'all' ? 'No projects match your filter.' : 'No projects found. Sync Outlook or create one in Settings.'}</div>`;
+    return;
+  }
+
+  const statusPills = {
+    'needs-attention':'<span class="pill pill-red">Attention</span>',
+    'active':'<span class="pill pill-amber">Active</span>',
+    'on-track':'<span class="pill pill-green">On track</span>',
+    'idle':'<span class="pill pill-gray">Idle</span>',
+    'quiet':'<span class="pill pill-gray">Idle</span>',
+    'parked':'<span class="pill pill-amber">Parked</span>'
+  };
+
+  list.innerHTML = projects.map(p => {
+    const isDim = ['idle','quiet','parked'].includes(p.status);
+    const lastStr = p.latest ? (p.daysSince===0?'Today':p.daysSince===1?'Yesterday':`${p.daysSince}d ago`) : 'No emails';
+    const pct = p.total > 0 ? Math.round(((p.total-p.unread)/p.total)*100) : 0;
+    const isSelected = p.name === _currentProjName;
+    const overdueCount = p.emails ? p.emails.filter(e => isOverdue48h(e, p.emails)).length : 0;
+    const deadlineCount = p.emails ? p.emails.filter(e => hasDeadlineFlag(e)).length : 0;
+
+    const safeName = JSON.stringify(p.name);
+    return `<div class="proj-card${isSelected?' active':''}" style="--proj-color:${p.colour};${isDim?'opacity:0.65':''}"
+      onclick="openOutlookProj(${safeName})"
+      ondblclick="openOutlookProj(${safeName}, true)"
+      title="Click to select · Double-click for instant summary">
+      <div class="proj-card-header">
+        <div class="proj-card-dot" style="background:${p.colour}"></div>
+        <div class="proj-card-name">${escHtml(p.name)}</div>
+        <div class="proj-card-count" style="font-family:var(--mono);font-size:10px;color:var(--muted)">${p.total}</div>
+        ${statusPills[p.status]||''}
+      </div>
+      <div class="proj-card-meta">
+        ${lastStr}${p.unread>0?` · <span style="color:var(--warning)">${p.unread} unread</span>`:''}
+        ${overdueCount>0?` · <span style="color:var(--danger)">${overdueCount} overdue</span>`:''}
+        ${deadlineCount>0?` · <span style="color:var(--warning)">📅 deadline</span>`:''}
+      </div>
+      <div class="proj-card-bar"><div class="proj-card-fill" style="width:${pct}%;background:${p.colour}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function excludeCategory(name) {
+  _excludedCategories.add(name);
+  saveManualStatus();
+  delete _projects[name];
+  renderProjectList();
+  toast(`"${name}" moved to email tracker`);
+}
+
+function keepAsProject(name) {
+  if (_projects[name]) _projects[name].isPerson = false;
+  renderProjectList();
+}
+
+function toggleProjectStatus(name) {
+  const p = _projects[name];
+  if (!p) return;
+  const current = p.status;
+  const next = ['active','on-track','needs-attention'].includes(current) ? 'quiet' : 'active';
+  _manualStatus[name] = next;
+  p.status = next;
+  saveManualStatus();
+  renderProjectList();
+  // re-open to refresh detail
+  openOutlookProj(name);
+  toast(`"${name}" marked as ${next}`);
+}
+
+// ── Email analysis helpers ────────────────────────────────
+const DEADLINE_PATTERNS = [
+  /\b(by|before|due|deadline|no later than|must be|submit by|complete by)\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{1,2}[\/-]\d{1,2}|\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))/i,
+  /\b(end of|eod|eow|end of week|end of month|this (week|month|friday|monday))\b/i,
+  /\b(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})\b/,
+  /\b(urgent|asap|immediately|time.sensitive|time sensitive)\b/i
+];
+
+function hasDeadlineFlag(email) {
+  const text = (email.subject || '') + ' ' + (email.bodyPreview || '');
+  return DEADLINE_PATTERNS.some(p => p.test(text));
+}
+
+function isOverdue48h(email, myEmails) {
+  // An email is overdue if sent/received >48h ago and no reply in the thread
+  const age = (Date.now() - new Date(email.receivedDateTime)) / (1000 * 60 * 60);
+  if (age < 48) return false;
+  if (email.isRead === false) return true; // unread and >48h old = overdue
+  // Check if there's a later email in the same conversation
+  const conv = email.conversationId;
+  if (!conv) return !email.isRead;
+  const replies = (myEmails || []).filter(e =>
+    e.conversationId === conv &&
+    new Date(e.receivedDateTime) > new Date(email.receivedDateTime)
+  );
+  return replies.length === 0; // no reply = overdue
+}
+
+let _currentEmailFilter = 'all'; // 'all' | 'overdue' | 'deadline' | 'unread'
+
+function openOutlookProj(name, autoSummary = false) {
+  const p = _projects[name];
+  if (!p) { toast('Project not found: ' + name); return; }
+  _currentProjName = name;
+  currentProj = name;
+  _currentEmailFilter = 'all';
+
+  document.querySelectorAll('.proj-card').forEach(c => {
+    c.classList.toggle('active', c.querySelector('.proj-card-name')?.textContent.trim().startsWith(name));
+  });
+
+  document.getElementById('proj-detail-title').textContent = name;
+  document.getElementById('proj-detail-colour').style.background = p.colour;
+
+  const statusLabels = {'needs-attention':'Needs attention','active':'Active','on-track':'On track','idle':'Idle','quiet':'Idle','parked':'Parked'};
+  const statusClasses = {'needs-attention':'pill-red','active':'pill-amber','on-track':'pill-green','idle':'pill-gray','quiet':'pill-gray','parked':'pill-amber'};
+  const statusEl = document.getElementById('proj-detail-status');
+  statusEl.textContent = statusLabels[p.status] || p.status;
+  statusEl.className = 'pill ' + (statusClasses[p.status]||'pill-gray');
+  statusEl.style.cursor = 'pointer';
+  statusEl.title = 'Click to toggle active/idle';
+  statusEl.onclick = () => toggleProjectStatus(name);
+
+  document.getElementById('proj-overview-section').style.display = 'block';
+  document.getElementById('proj-summary-section').style.display = 'none';
+
+  // ── Analyse emails for flags ──
+  const overdueEmails = p.emails.filter(e => isOverdue48h(e, p.emails));
+  const deadlineEmails = p.emails.filter(e => hasDeadlineFlag(e));
+  const flagsEl = document.getElementById('proj-flags');
+
+  if (overdueEmails.length > 0 || deadlineEmails.length > 0) {
+    flagsEl.style.display = 'block';
+    let flagsHtml = '';
+    if (overdueEmails.length > 0) {
+      flagsHtml += `<div style="background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.3);border-radius:var(--radius-md);padding:10px 12px;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;color:var(--danger);margin-bottom:5px">⚠ ${overdueEmails.length} email${overdueEmails.length>1?'s':''} with no reply (48h+)</div>
+        ${overdueEmails.slice(0,3).map(e=>{
+          const age = Math.floor((Date.now()-new Date(e.receivedDateTime))/(1000*60*60));
+          const from = e.from?.emailAddress?.name||e.from?.emailAddress?.address||'?';
+          return `<div style="font-size:11px;color:var(--text);padding:3px 0;border-bottom:1px solid rgba(248,113,113,0.15)">${escHtml(e.subject||'(no subject)')} <span style="color:var(--muted)">— ${from}, ${age}h ago</span></div>`;
+        }).join('')}
+      </div>`;
+    }
+    if (deadlineEmails.length > 0) {
+      flagsHtml += `<div style="background:rgba(251,191,36,0.10);border:1px solid rgba(251,191,36,0.3);border-radius:var(--radius-md);padding:10px 12px;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;color:var(--warning);margin-bottom:5px">📅 ${deadlineEmails.length} email${deadlineEmails.length>1?'s':''} contain a deadline or date</div>
+        ${deadlineEmails.slice(0,3).map(e=>{
+          const date = new Date(e.receivedDateTime).toLocaleDateString('en-ZA',{day:'numeric',month:'short'});
+          return `<div style="font-size:11px;color:var(--text);padding:3px 0;border-bottom:1px solid rgba(251,191,36,0.15)">${escHtml(e.subject||'(no subject)')} <span style="color:var(--muted)">— ${date}</span></div>`;
+        }).join('')}
+      </div>`;
+    }
+    flagsEl.innerHTML = flagsHtml;
+  } else {
+    flagsEl.style.display = 'none';
+  }
+
+  // ── Email filter tabs ──
+  const filterBtns = document.getElementById('email-filter-btns');
+  const allCount = p.emails.length;
+  const unreadCount = p.emails.filter(e=>!e.isRead).length;
+  const overdueCount = overdueEmails.length;
+  const deadlineCount = deadlineEmails.length;
+
+  filterBtns.innerHTML = '';
+  const makeFilterBtn = (label, val, count, color) => {
+    const b = document.createElement('button');
+    b.className = 'btn btn-sm';
+    b.style.cssText = `font-size:10px;padding:3px 8px;min-height:24px;${val === _currentEmailFilter ? 'background:var(--accent);color:#fff;border-color:var(--accent)' : ''}${color?';color:'+color:''}`;
+    b.textContent = `${label} (${count})`;
+    b.addEventListener('click', () => {
+      _currentEmailFilter = val;
+      renderProjectEmails(p, overdueEmails, deadlineEmails);
+      filterBtns.querySelectorAll('button').forEach(x => {
+        x.style.background = '';x.style.color = color||'';x.style.borderColor = '';
+      });
+      b.style.background = 'var(--accent)';b.style.color = '#fff';b.style.borderColor = 'var(--accent)';
+    });
+    filterBtns.appendChild(b);
+  };
+  makeFilterBtn('All', 'all', allCount);
+  if (unreadCount > 0) makeFilterBtn('Unread', 'unread', unreadCount);
+  if (overdueCount > 0) makeFilterBtn('Overdue', 'overdue', overdueCount, 'var(--danger)');
+  if (deadlineCount > 0) makeFilterBtn('Deadlines', 'deadline', deadlineCount, 'var(--warning)');
+
+  renderProjectEmails(p, overdueEmails, deadlineEmails);
+
+  // ── People chips (external only) ──
+  applyPeopleFilter(name);
+
+  // ── Tasks ──
+  const today2 = new Date(); today2.setHours(0,0,0,0);
+  document.getElementById('proj-tasks').innerHTML = p.tasks.length === 0
+    ? `<div style="color:var(--muted);font-size:11px;line-height:1.6">No tasks linked. Tag To Do tasks with this category to see them here.</div>`
+    : p.tasks.map(t => {
+        const due = t.dueDateTime ? new Date(t.dueDateTime.dateTime) : null;
+        const overdue = due && due < today2;
+        return `<div class="task-row">
+          <span class="dot ${overdue?'dot-red':t.importance==='high'?'dot-amber':'dot-green'}"></span>
+          <span class="task-name" style="font-size:12px">${escHtml(t.title)}</span>
+          ${due?`<span class="task-meta" style="${overdue?'color:var(--danger)':''}">${overdue?'Overdue':due.toLocaleDateString('en-ZA',{day:'numeric',month:'short'})}</span>`:''}
+        </div>`;
+      }).join('');
+
+  // ── Action bar ──
+  const actionBar = document.getElementById('proj-action-bar');
+  const isQ = ['idle','quiet','parked'].includes(p.status);
+  // Rebuild keeping the summary button + adding status toggle + refresh
+  actionBar.innerHTML = '';
+  const makeActBtn = (label, cls, fn) => {
+    const b = document.createElement('button');
+    b.className = 'btn btn-sm' + (cls ? ' '+cls : '');
+    b.textContent = label;
+    b.addEventListener('click', fn);
+    actionBar.appendChild(b);
+  };
+  makeActBtn('★ Full summary', 'btn-accent', generateProjectSummary);
+  makeActBtn(isQ ? '▶ Mark active' : '⏸ Mark idle', isQ ? 'btn-accent' : '', () => toggleProjectStatus(name));
+  makeActBtn('↻ Refresh', '', () => refreshProject(name));
+
+  setTimeout(() => {
+    document.getElementById('proj-detail').scrollIntoView({behavior:'smooth',block:'start'});
+  }, 100);
+
+  // ── AI quick overview ──
+  const emailSummary = p.emails.slice(0,8).map(e =>
+    `"${e.subject}" from ${e.from?.emailAddress?.name||e.from?.emailAddress?.address} on ${new Date(e.receivedDateTime).toLocaleDateString()}, ${e.isRead?'read':'UNREAD'}.${hasDeadlineFlag(e)?' [DEADLINE IN EMAIL]':''} Preview: ${(e.bodyPreview||'').substring(0,100)}`
+  ).join('\n');
+  const taskSummary = p.tasks.slice(0,5).map(t=>`Task: "${t.title}"${t.dueDateTime?', due '+new Date(t.dueDateTime.dateTime).toLocaleDateString():''}, priority: ${t.importance}`).join('\n');
+  const overdueNote = overdueEmails.length > 0 ? `\nOVERDUE (48h+ no reply): ${overdueEmails.map(e=>'"'+e.subject+'"').join(', ')}` : '';
+  const deadlineNote = deadlineEmails.length > 0 ? `\nDEADLINE EMAILS: ${deadlineEmails.map(e=>'"'+e.subject+'"').join(', ')}` : '';
+
+  // Single click = quick AI overview; double-click = full comprehensive summary
+  if (autoSummary) {
+    // Scroll to show summary section first
+    setTimeout(() => {
+      document.getElementById('proj-summary-section').style.display = 'block';
+      document.getElementById('proj-summary-section').scrollIntoView({behavior:'smooth', block:'start'});
+    }, 200);
+    generateProjectSummary();
+  } else {
+    callClaude(
+      `Executive assistant. Project: "${name}". Status: ${p.status}.${overdueNote}${deadlineNote}\n\nEmails (${p.total} total, ${p.unread} unread):\n${emailSummary||'No emails'}\n\n${taskSummary?'Tasks:\n'+taskSummary:''}\n\nProvide:\n1. PROJECT OVERVIEW (2 sentences)\n2. CURRENT STATUS\n3. KEY PEOPLE & ROLES\n4. PENDING/OVERDUE ITEMS — flag any 48h+ unreplied emails\n5. DEADLINES — list any dates or deadlines found in emails\n6. NEXT STEPS (3 bullets)\n\nBe specific. Reference actual email subjects.`,
+      'proj-detail-text', null
+    );
+  }
+}
+
+function renderProjectEmails(p, overdueEmails, deadlineEmails) {
+  const el = document.getElementById('proj-emails');
+  if (!el) return;
+
+  let emails;
+  switch(_currentEmailFilter) {
+    case 'overdue': emails = overdueEmails; break;
+    case 'deadline': emails = deadlineEmails; break;
+    case 'unread': emails = p.emails.filter(e=>!e.isRead); break;
+    default: emails = p.emails;
+  }
+
+  if (emails.length === 0) {
+    el.innerHTML = `<div style="color:var(--muted);font-size:12px;padding:6px 0">No emails in this filter.</div>`;
+    return;
+  }
+
+  el.innerHTML = emails.slice(0,10).map(e => {
+    const from = e.from?.emailAddress?.name || e.from?.emailAddress?.address || 'Unknown';
+    const date = new Date(e.receivedDateTime).toLocaleDateString('en-ZA',{day:'numeric',month:'short'});
+    const isOv = isOverdue48h(e, p.emails);
+    const isDl = hasDeadlineFlag(e);
+    const age = Math.floor((Date.now()-new Date(e.receivedDateTime))/(1000*60*60));
+
+    let flags = '';
+    if (isOv) flags += `<span class="pill pill-red" style="font-size:9px;padding:1px 5px;margin-left:4px">48h+ no reply</span>`;
+    if (isDl) flags += `<span class="pill pill-amber" style="font-size:9px;padding:1px 5px;margin-left:4px">deadline</span>`;
+    if (!e.isRead) flags += `<span class="pill pill-purple" style="font-size:9px;padding:1px 5px;margin-left:4px">unread</span>`;
+
+    return `<div class="proj-email-row" style="padding:7px 0">
+      <div style="display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap;margin-bottom:2px">
+        <div class="proj-email-subject" style="font-weight:${!e.isRead?'600':'400'};flex:1">${escHtml(e.subject||'(no subject)')}</div>
+        <div style="flex-shrink:0">${flags}</div>
+      </div>
+      <div class="proj-email-meta">${escHtml(from)} · ${date}${isOv?' · '+age+'h ago':''}</div>
+    </div>`;
+  }).join('');
+}
+
+function generateProjectSummary() {
+  const p = _projects[_currentProjName];
+  if (!p) { toast('Select a project first'); return; }
+
+  const summarySection = document.getElementById('proj-summary-section');
+  summarySection.style.display = 'block';
+  summarySection.scrollIntoView({behavior:'smooth', block:'start'});
+
+  const allEmails = p.emails.slice(0,20).map(e => {
+    const from = e.from?.emailAddress?.name||e.from?.emailAddress?.address||'?';
+    const date = new Date(e.receivedDateTime).toLocaleDateString('en-ZA',{day:'numeric',month:'short'});
+    const isOv = isOverdue48h(e, p.emails);
+    const isDl = hasDeadlineFlag(e);
+    return `[${date}] "${e.subject||'no subject'}" FROM:${from} STATUS:${e.isRead?'read':'UNREAD'}${isOv?' OVERDUE-48H':''}${isDl?' DEADLINE-FLAGGED':''}\nPreview: ${(e.bodyPreview||'').substring(0,150)}`;
+  }).join('\n\n');
+
+  const tasksSummary = p.tasks.map(t => {
+    const due = t.dueDateTime ? new Date(t.dueDateTime.dateTime) : null;
+    const today = new Date(); today.setHours(0,0,0,0);
+    const isOv = due && due < today;
+    return `- "${t.title}" | Due:${due?due.toLocaleDateString():'no date'} | Priority:${t.importance}${isOv?' [OVERDUE]':''}`;
+  }).join('\n');
+
+  // Pull in minutes linked to this project from session
+  const linkedMinutes = (window._minutesLibrary||[]).filter(m => m.project === _currentProjName);
+  const minutesSummary = linkedMinutes.length > 0
+    ? linkedMinutes.map(m => `[${m.date}] ${m.title}:\n${m.summary}`).join('\n\n')
+    : 'No meeting minutes recorded for this project yet.';
+
+  const overdueEmails = p.emails.filter(e => isOverdue48h(e, p.emails));
+  const deadlineEmails = p.emails.filter(e => hasDeadlineFlag(e));
+  const extPeople = Object.entries(p.people).filter(([a])=>!isInternalEmail(a)).map(([,n])=>n).join(', ');
+
+  callClaude(
+    `You are preparing a FULL PROJECT STATUS SUMMARY for: "${_currentProjName}"\n\nProject status: ${p.status}\nExternal people involved: ${extPeople||'none identified'}\n\n=== ALL EMAILS (${p.total} total, ${p.unread} unread) ===\n${allEmails||'No emails'}\n\n=== TASKS ===\n${tasksSummary||'No tasks linked'}\n\n=== MEETING MINUTES ===\n${minutesSummary}\n\n=== FLAGS ===\nEmails with no reply (48h+): ${overdueEmails.length > 0 ? overdueEmails.map(e=>'"'+e.subject+'"').join(', ') : 'None'}\nEmails with deadlines: ${deadlineEmails.length > 0 ? deadlineEmails.map(e=>'"'+e.subject+'"').join(', ') : 'None'}\n\nPrepare a COMPREHENSIVE PROJECT SUMMARY with these sections:\n\n1. EXECUTIVE OVERVIEW\n   What is this project? What is its purpose? (3-4 sentences from actual email content)\n\n2. CURRENT STATUS\n   Honest assessment with specific evidence from emails\n\n3. KEY PEOPLE & THEIR ROLES\n   Who is involved and what are they responsible for?\n\n4. COMPLETED / RESOLVED ITEMS\n   What has been done based on the email thread?\n\n5. PENDING ACTION ITEMS\n   Specific items that need action, with who owns them\n\n6. OVERDUE & FLAGGED ITEMS\n   Emails with no reply (48h+) and emails with deadlines — what action is needed?\n\n7. UPCOMING DEADLINES\n   Any dates, deadlines, or time-sensitive items found in the emails\n\n8. MEETING MINUTES SUMMARY\n   Key points from any recorded meeting minutes\n\n9. RECOMMENDED NEXT STEPS\n   Top 5 concrete actions to move this project forward\n\nBe specific. Use actual email subjects and names. This is the primary reference document for this project.`,
+    'proj-summary-text', null
+  );
+}
+
+async function refreshProject(name) {
+  if (!await ensureToken()) return;
+  const p = _projects[name];
+  if (!p) return;
+  toast(`Refreshing "${name}"...`);
+  const newEmails = [];
+  const fetchAndAdd = async (folder) => {
+    try {
+      const encoded = encodeURIComponent(name);
+      const data = await msGraphGet(`https://graph.microsoft.com/v1.0/me/${folder}?$filter=categories/any(c:c eq '${encoded}')&$top=50&$select=subject,from,toRecipients,ccRecipients,receivedDateTime,isRead,bodyPreview,categories,conversationId&$orderby=receivedDateTime desc`);
+      (data.value||[]).forEach(e => {
+        if (!newEmails.find(x => x.subject===e.subject && x.receivedDateTime===e.receivedDateTime)) newEmails.push(e);
+      });
+    } catch {}
+  };
+  await fetchAndAdd('mailFolders/inbox/messages');
+  await fetchAndAdd('mailFolders/sentitems/messages');
+  await fetchAndAdd('messages');
+  newEmails.sort((a,b) => new Date(b.receivedDateTime)-new Date(a.receivedDateTime));
+  p.emails = newEmails;
+  p.total = newEmails.length;
+  p.unread = newEmails.filter(e=>!e.isRead).length;
+  p.latest = newEmails[0] ? new Date(newEmails[0].receivedDateTime) : null;
+  p.daysSince = p.latest ? Math.floor((Date.now()-p.latest)/86400000) : 999;
+  // rebuild people
+  p.people = {};
+  newEmails.forEach(e => {
+    const addP = x => { const addr=x?.emailAddress?.address?.toLowerCase(); if(addr&&!p.people[addr]) p.people[addr]=x.emailAddress.name||addr; };
+    addP(e.from); (e.toRecipients||[]).forEach(addP); (e.ccRecipients||[]).forEach(addP);
+  });
+  renderProjectList();
+  openOutlookProj(name);
+  toast(`✓ "${name}" refreshed — ${newEmails.length} emails`);
+}
+
+function openProj(name, desc, pct, status) {
+  if (_projects[name]) { openOutlookProj(name); return; }
+  currentProj = name;
+  document.getElementById('proj-detail-title').textContent = name;
+  callClaude(`Summarise project "${name}" (${pct}% complete, status: ${status}). Tasks: ${desc}.\nGive: current status, 3 open tasks, main blocker, next milestone. 5 bullets max.`, "proj-detail-text", null);
+}
+
+function askProj() {
+  const q = document.getElementById('proj-input').value.trim();
+  // If no question typed and a project is selected, generate the full summary
+  if (!q) {
+    if (_currentProjName) {
+      generateProjectSummary();
+    } else {
+      toast('Select a project first, then tap Ask for a summary');
+    }
+    return;
+  }
+  const p = _projects[_currentProjName];
+  const ctx = p
+    ? `Project: "${_currentProjName}". People: ${Object.entries(p.people).filter(([a])=>!isInternalEmail(a)).map(([,n])=>n).slice(0,6).join(', ')}. ${p.total} emails, ${p.unread} unread. Status: ${p.status}. Recent emails: ${p.emails.slice(0,4).map(e=>`"${e.subject}"`).join(', ')}.`
+    : '';
+  callClaude(`${ctx}\n\nRequest: ${q}\n\nRespond as executive assistant, concisely.`, "proj-detail-text", null);
+  document.getElementById('proj-input').value = '';
+}
+
+// ── Dashboard metric click handlers ──────────────────────
+function initDashMetrics() {
+  // Overdue → highlight overdue tasks card
+  const m0 = document.getElementById('m-overdue');
+  if (m0) m0.onclick = () => {
+    const ul = document.getElementById('urgent-list');
+    const title = document.getElementById('urgent-title');
+    if (ul) ul.scrollIntoView({behavior:'smooth', block:'center'});
+    if (title) { title.style.color = 'var(--danger)'; setTimeout(()=>title.style.color='',2000); }
+  };
+  // Due this week → highlight in-progress card
+  const m1 = document.getElementById('m-week');
+  if (m1) m1.onclick = () => {
+    const il = document.getElementById('inprog-list');
+    const title = document.getElementById('inprog-title');
+    if (il) il.scrollIntoView({behavior:'smooth', block:'center'});
+    if (title) { title.style.color = 'var(--warning)'; setTimeout(()=>title.style.color='',2000); }
+  };
+  // Active projects → go to projects tab using the correct sidebar nav item
+  const m2 = document.getElementById('m-proj');
+  if (m2) m2.onclick = () => {
+    const projNavItem = document.querySelectorAll('.snav-item')[1]; // projects is index 1
+    showTab('projects', projNavItem || document.createElement('div'), 's');
+  };
+  // Email → go to tracker tab
+  const m3 = document.getElementById('m-email');
+  if (m3) m3.onclick = () => {
+    const trackerNavItem = document.querySelectorAll('.snav-item')[5]; // tracker is index 5
+    showTab('tracker', trackerNavItem || document.createElement('div'), 's');
+  };
+}
+
+// ── Minute Taker ─────────────────────────────────────────
+let _minuteTakers = [];       // [{name, email}]
+let _mtExclusions = {};       // { meetingTitle: true }
+let _calendarMeetings = [];   // current week's meetings
+
+function loadMTData() {
+  try { _minuteTakers = JSON.parse(sessionStorage.getItem('minute_takers') || '[]'); } catch { _minuteTakers = []; }
+  try { _mtExclusions = JSON.parse(sessionStorage.getItem('mt_exclusions') || '{}'); } catch { _mtExclusions = {}; }
+}
+function saveMTData() {
+  sessionStorage.setItem('minute_takers', JSON.stringify(_minuteTakers));
+  sessionStorage.setItem('mt_exclusions', JSON.stringify(_mtExclusions));
+}
+
+function renderMTList() {
+  const el = document.getElementById('mt-list');
+  if (!el) return;
+  if (_minuteTakers.length === 0) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;font-style:italic">No minute takers added yet.</div>';
+    return;
+  }
+  el.innerHTML = _minuteTakers.map((mt, i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500">${escHtml(mt.name)}</div>
+        ${mt.email ? `<div style="font-size:11px;color:var(--muted);font-family:var(--mono)">${escHtml(mt.email)}</div>` : ''}
+      </div>
+      <span class="pill pill-green" style="font-size:10px">Default</span>
+      <button class="btn btn-sm btn-danger" data-mt-idx="${i}">Remove</button>
+    </div>`).join('');
+
+  // Event delegation for remove buttons
+  el.onclick = e => {
+    const btn = e.target.closest('[data-mt-idx]');
+    if (!btn) return;
+    const idx = parseInt(btn.dataset.mtIdx);
+    _minuteTakers.splice(idx, 1);
+    saveMTData();
+    renderMTList();
+    toast('Minute taker removed');
+  };
+}
+
+function addMinuteTaker() {
+  const name = document.getElementById('mt-name').value.trim();
+  const email = document.getElementById('mt-email').value.trim();
+  const conf = document.getElementById('mt-confirm');
+  if (!name) { toast('Enter a name'); return; }
+  if (_minuteTakers.find(mt => mt.name.toLowerCase() === name.toLowerCase())) { toast('Already added'); return; }
+  _minuteTakers.push({ name, email });
+  saveMTData();
+  document.getElementById('mt-name').value = '';
+  document.getElementById('mt-email').value = '';
+  conf.style.display = 'block';
+  conf.textContent = `✓ ${name} added as default minute taker for all meetings`;
+  renderMTList();
+  renderMeetingScheduleWithMT(_calendarMeetings);
+  toast(`✓ ${name} added`);
+}
+
+function excludeMtFromMeeting() {
+  const sel = document.getElementById('mt-exclude-meeting');
+  const title = sel.value;
+  if (!title) { toast('Select a meeting first'); return; }
+  _mtExclusions[title] = true;
+  saveMTData();
+  renderExcludedList();
+  renderMeetingScheduleWithMT(_calendarMeetings);
+  toast(`Minute taker excluded from "${title}"`);
+}
+
+function renderExcludedList() {
+  const el = document.getElementById('mt-excluded-list');
+  if (!el) return;
+  const excluded = Object.keys(_mtExclusions);
+  if (excluded.length === 0) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div style="font-size:11px;color:var(--muted);margin-bottom:5px">Excluded from:</div>' +
+    excluded.map(t => `<div style="display:flex;align-items:center;gap:6px;padding:3px 0">
+      <span style="flex:1;font-size:11px">${escHtml(t)}</span>
+      <button class="btn btn-sm" style="font-size:10px;padding:2px 7px" data-unexclude="${escHtml(t)}">Re-add</button>
+    </div>`).join('');
+  el.onclick = e => {
+    const btn = e.target.closest('[data-unexclude]');
+    if (!btn) return;
+    delete _mtExclusions[btn.dataset.unexclude];
+    saveMTData();
+    renderExcludedList();
+    renderMeetingScheduleWithMT(_calendarMeetings);
+    toast('Minute taker re-added');
+  };
+}
+
+// Render schedule with minute taker annotations
+function renderMeetingScheduleWithMT(events) {
+  _calendarMeetings = events;
+  const schedCard = document.getElementById('sched-card');
+  if (!schedCard) return;
+
+  // Update meeting exclusion select
+  const sel = document.getElementById('mt-exclude-meeting');
+  if (sel) {
+    const meetings = events.filter(e => {
+      const s = new Date(e.start.dateTime + (e.start.timeZone==='UTC'?'Z':''));
+      return s >= new Date();
+    });
+    sel.innerHTML = '<option value="">Select a meeting...</option>' +
+      meetings.map(e => `<option value="${escHtml(e.subject||'(no title)')}">${escHtml(e.subject||'(no title)')}</option>`).join('');
+  }
+  renderExcludedList();
+
+  const hasMT = _minuteTakers.length > 0;
+  const today = new Date().toDateString();
+  const todayEvents = events.filter(e => new Date(e.start.dateTime + (e.start.timeZone==='UTC'?'Z':'')).toDateString() === today);
+  const upcomingEvents = events.filter(e => new Date(e.start.dateTime + (e.start.timeZone==='UTC'?'Z':'')).toDateString() !== today);
+
+  const renderEvent = e => {
+    const s = new Date(e.start.dateTime + (e.start.timeZone==='UTC'?'Z':''));
+    const en = new Date(e.end.dateTime + (e.end.timeZone==='UTC'?'Z':''));
+    const dateStr = s.toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'});
+    const timeStr = s.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'}) + ' – ' + en.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'});
+    const loc = e.location?.displayName || (e.isOnlineMeeting ? 'Online meeting' : 'Meeting');
+    const title = e.subject || '(no title)';
+    const isExcluded = _mtExclusions[title];
+    const mtNote = hasMT && !isExcluded
+      ? `<div style="font-size:10px;color:var(--success);margin-top:3px">🎙 ${_minuteTakers.map(mt=>mt.name).join(', ')} taking minutes</div>`
+      : (hasMT && isExcluded ? '<div style="font-size:10px;color:var(--muted);margin-top:3px">No minute taker</div>' : '');
+    return `<div class="sched-row">
+      <div class="sched-time">${dateStr}<br><span style="font-size:9px">${timeStr}</span></div>
+      <div class="sched-block sched-meeting">
+        <div class="sched-name">${escHtml(title)}</div>
+        <div class="sched-sub">${escHtml(loc)}</div>
+        ${mtNote}
+      </div>
+    </div>`;
+  };
+
+  const todayStr = new Date().toLocaleDateString('en-ZA',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  schedCard.innerHTML = `<div class="card-title" id="sched-date-title">Today — ${escHtml(todayStr)}</div>`
+    + (todayEvents.length === 0
+        ? '<div style="color:var(--muted);font-size:13px;padding:10px 0">No meetings today</div>'
+        : todayEvents.map(renderEvent).join(''))
+    + (upcomingEvents.length > 0
+        ? `<div style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;margin:14px 0 8px">Upcoming this week</div>`
+          + upcomingEvents.slice(0,6).map(renderEvent).join('')
+        : '');
+}
+
+// Update saveToLibrary to refresh minutes list
+function refreshMinutesLibraryUI() {
+  const libEl = document.getElementById('minutes-library-list');
+  if (!libEl || !window._minutesLibrary || window._minutesLibrary.length === 0) return;
+  libEl.innerHTML = window._minutesLibrary.map(m => `
+    <div class="minute-item" onclick="openMinute(${JSON.stringify(m.title)},${JSON.stringify(m.project)},${JSON.stringify(m.summary.substring(0,200))})">
+      <div class="minute-icon">📋</div>
+      <div class="minute-info">
+        <div class="minute-title">${escHtml(m.title)}</div>
+        <div class="minute-meta">${escHtml(m.project)} · ${escHtml(m.date)}</div>
+      </div>
+      <span class="pill pill-green">Saved</span>
+    </div>`).join('');
+}
+function optimiseDay() {
+  const calCtx = window._calContext || 'No calendar loaded — connect Microsoft 365 first.';
+  const taskCtx = window._taskContext || 'No tasks loaded.';
+  callClaude(`Calendar: ${calCtx}\nTasks:\n${taskCtx}\n\nGive 5 direct scheduling recommendations: priority order, what to batch, what to defer, how to protect focus time.`, "sched-text", null);
+}
+function askSched() {
+  const q = document.getElementById('sched-input').value.trim();
+  if (!q) return;
+  const calCtx = window._calContext ? `Calendar: ${window._calContext}` : '';
+  const taskCtx = window._taskContext ? `Tasks:\n${window._taskContext}` : '';
+  callClaude(`${calCtx}\n${taskCtx}\n\nRequest: ${q}. Give a direct recommendation.`, "sched-text", null);
+  document.getElementById('sched-input').value = '';
+}
+
+// ── Recorder ──
+function toggleRecord() {
+  if (recState === 'idle') startRecord();
+  else stopRecord();
+}
+function startRecord() {
+  recState = 'recording'; recSeconds = 0; fullTranscript = '';
+  document.getElementById('transcript-area').innerHTML = '<span style="color:var(--muted);font-style:italic">Listening...</span>';
+  updateRecUI();
+  recInterval = setInterval(() => { recSeconds++; updateTimer(); }, 1000);
+  document.getElementById('btn-process').disabled = false;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SR) {
+    recognition = new SR();
+    recognition.continuous = true; recognition.interimResults = true; recognition.lang = 'en-ZA';
+    let finalText = '';
+    recognition.onresult = (e) => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) finalText += e.results[i][0].transcript + ' ';
+        else interim += e.results[i][0].transcript;
+      }
+      fullTranscript = finalText;
+      document.getElementById('transcript-area').textContent = finalText + (interim ? '[ ' + interim + ' ]' : '');
+    };
+    recognition.onerror = (e) => { document.getElementById('rec-lang-info').textContent = 'Mic error: ' + e.error; };
+    recognition.onend = () => { if (recState === 'recording') recognition.start(); };
+    recognition.start();
+    document.getElementById('rec-lang-info').textContent = 'Microphone active — speak now';
+  } else {
+    document.getElementById('rec-lang-info').textContent = 'Speech not supported — type notes manually';
+  }
+  toast('Recording started');
+}
+function togglePause() {
+  if (recState === 'recording') {
+    recState = 'paused'; clearInterval(recInterval);
+    if (recognition) recognition.stop();
+  } else if (recState === 'paused') {
+    recState = 'recording';
+    recInterval = setInterval(() => { recSeconds++; updateTimer(); }, 1000);
+    if (recognition) recognition.start();
+  }
+  updateRecUI();
+}
+function stopRecord() {
+  recState = 'idle'; clearInterval(recInterval);
+  if (recognition) { recognition.onend = null; recognition.stop(); recognition = null; }
+  updateRecUI();
+  document.getElementById('rec-lang-info').textContent = 'Microphone not active';
+  toast('Recording stopped — tap Process & file');
+}
+function updateTimer() {
+  const m = String(Math.floor(recSeconds/60)).padStart(2,'0');
+  const s = String(recSeconds%60).padStart(2,'0');
+  document.getElementById('rec-timer').textContent = m + ':' + s;
+}
+function updateRecUI() {
+  const dot = document.getElementById('rec-dot');
+  const status = document.getElementById('rec-status-text');
+  const btnRec = document.getElementById('btn-record');
+  const btnPause = document.getElementById('btn-pause');
+  const btnStop = document.getElementById('btn-stop');
+  if (recState === 'recording') {
+    dot.className = 'rec-dot recording'; status.textContent = 'Recording';
+    btnRec.classList.remove('idle'); btnRec.innerHTML = '&#9632;';
+    btnPause.disabled = false; btnStop.disabled = false;
+    btnPause.innerHTML = '&#9646;&#9646;';
+  } else if (recState === 'paused') {
+    dot.className = 'rec-dot paused'; status.textContent = 'Paused';
+    btnRec.innerHTML = '&#9679;'; btnPause.innerHTML = '&#9654;';
+  } else {
+    dot.className = 'rec-dot'; status.textContent = 'Idle';
+    btnRec.classList.add('idle'); btnRec.innerHTML = '&#9679;';
+    btnPause.disabled = true; btnStop.disabled = true;
+    btnPause.innerHTML = '&#9646;&#9646;';
+  }
+}
+function addNoteStamp() {
+  const m = String(Math.floor(recSeconds/60)).padStart(2,'0');
+  const s = String(recSeconds%60).padStart(2,'0');
+  const notes = document.getElementById('live-notes');
+  notes.focus();
+  document.execCommand('insertText', false, '\n[' + m + ':' + s + '] ');
+}
+function addActionFlag() {
+  const notes = document.getElementById('live-notes');
+  notes.focus();
+  document.execCommand('insertText', false, '\n▶ ACTION: ');
+  const hist = document.getElementById('note-history');
+  const m = String(Math.floor(recSeconds/60)).padStart(2,'0');
+  const s = String(recSeconds%60).padStart(2,'0');
+  if (hist.querySelector('.transcript-placeholder')) hist.innerHTML = '';
+  hist.textContent += '[' + m + ':' + s + '] Action item flagged\n';
+}
+function processRecording() {
+  const transcript = fullTranscript || document.getElementById('transcript-area').textContent;
+  const liveNotes = document.getElementById('live-notes').innerText || '';
+  const title = document.getElementById('rec-title').value || 'Meeting';
+  const project = document.getElementById('rec-project').value;
+  if (!transcript || transcript.includes('Listening') || transcript.includes('Transcript appears')) {
+    toast('No transcript yet — record first or type notes manually'); return;
+  }
+  callClaude(`Process meeting minutes. Meeting: "${title}". Project: ${project}.\nTranscript:\n${transcript}\nLive notes:\n${liveNotes}\n\nExtract:\n1. KEY DECISIONS\n2. ACTION ITEMS (owner + due date)\n3. OPEN QUESTIONS\n4. One-line project status update\n\nBe concise.`, "rec-result-text", "rec-result-card");
+}
+function saveToLibrary() {
+  const title = document.getElementById('rec-title').value || 'New recording';
+  const project = document.getElementById('rec-project').value;
+  const summaryText = document.getElementById('rec-result-text')?.textContent || '';
+  document.getElementById('new-minute-title').textContent = title;
+  document.getElementById('new-minute-meta').textContent = project + ' · Just recorded';
+  document.getElementById('new-minute-entry').style.display = 'flex';
+
+  // Store in minutes library for project summary inclusion
+  if (!window._minutesLibrary) window._minutesLibrary = [];
+  window._minutesLibrary.push({
+    title,
+    project,
+    date: new Date().toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'}),
+    summary: summaryText || fullTranscript.substring(0,500) || 'No transcript available'
+  });
+  // Persist across tabs
+  try { sessionStorage.setItem('minutes_library', JSON.stringify(window._minutesLibrary)); } catch {}
+  refreshMinutesLibraryUI();
+  toast('Saved to minutes library ✓');
+}
+function copyTranscript() {
+  const t = fullTranscript || document.getElementById('transcript-area').textContent;
+  navigator.clipboard.writeText(t).then(() => toast('Transcript copied ✓')).catch(() => toast('Copy failed — select text manually'));
+}
+function clearRecorder() {
+  stopRecord(); fullTranscript = ''; recSeconds = 0;
+  document.getElementById('rec-timer').textContent = '00:00';
+  document.getElementById('transcript-area').innerHTML = '<span class="transcript-placeholder">Transcript appears here as you speak. Hit record to begin.</span>';
+  document.getElementById('live-notes').innerHTML = '';
+  document.getElementById('note-history').innerHTML = '<span class="transcript-placeholder">Flagged actions appear here.</span>';
+  document.getElementById('rec-result-card').style.display = 'none';
+  document.getElementById('btn-process').disabled = true;
+}
+
+// ── Minutes ──
+function openMinute(title, project, notes) {
+  openMinuteTitle = title;
+  document.getElementById('minute-detail-title').textContent = title;
+  callClaude(`Summarise meeting "${title}" (project: ${project}). Notes: ${notes}. Give: key decisions, action items, follow-ups. 5 bullets max.`, "minute-detail-text", null);
+  setTimeout(() => document.getElementById('minute-detail').scrollIntoView({behavior:'smooth', block:'start'}), 100);
+}
+function askMinute() {
+  const q = document.getElementById('minute-input').value.trim();
+  if (!q) return;
+  callClaude(`Meeting: ${openMinuteTitle}. Question: ${q}. Answer concisely.`, "minute-detail-text", null);
+  document.getElementById('minute-input').value = '';
+}
+
+// ── Tracker ──
+function addToWatchlist() {
+  const email = document.getElementById('tracker-email').value.trim();
+  const proj = document.getElementById('tracker-proj').value;
+  if (!email) { toast('Enter an email address first'); return; }
+  const c = document.getElementById('tracker-confirm');
+  c.style.display = 'block';
+  c.textContent = '✓ ' + email + ' added — linked to ' + proj;
+  document.getElementById('tracker-email').value = '';
+  toast('Sender added to watchlist ✓');
+}
+function askTracker() {
+  const q = document.getElementById('tracker-input').value.trim();
+  if (!q) return;
+  const ctx = window._emailContext || 'No emails loaded yet — connect Microsoft 365 first.';
+  callClaude(`Email context:\n${ctx}\n\nQuery: ${q}\n\nRespond concisely as an executive assistant.`, "tracker-reply", null);
+  document.getElementById('tracker-input').value = '';
+}// ── Microsoft 365 / MSAL ──────────────────────────────
+let msalInstance = null;
+let msAccessToken = null;
+
+function getMSConfig() {
+  const clientId = document.getElementById('ms-client-id')?.value.trim();
+  const tenantId = document.getElementById('ms-tenant-id')?.value.trim() || 'common';
+  return { clientId, tenantId };
+}
+
+async function loadMSAL() {
+  if (window.msal) return true;
+  // Try unpkg as fallback if jsdelivr is blocked
+  const urls = [
+    'https://unpkg.com/@azure/msal-browser@3.11.1/lib/msal-browser.min.js',
+    'https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.11.1/lib/msal-browser.min.js'
+  ];
+  for (const url of urls) {
+    try {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = url;
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+      if (window.msal) return true;
+    } catch { continue; }
+  }
+  throw new Error('Could not load Microsoft auth library. Check your internet connection.');
+}
+
+async function msSignIn() {
+  const errEl = document.getElementById('ms-error');
+  const btn = document.querySelector('#tab-connections .btn-accent');
+  errEl.style.display = 'none';
+  const { clientId, tenantId } = getMSConfig();
+
+  if (!clientId || clientId.length < 10) {
+    errEl.style.display = 'block';
+    errEl.textContent = '⚠ Please paste your Application (Client) ID from Azure first (Step 3).';
+    return;
+  }
+
+  // Validate UUID format
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(clientId.trim())) {
+    errEl.style.display = 'block';
+    errEl.textContent = '⚠ That doesn\'t look like a valid Client ID. It should be in the format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx';
+    return;
+  }
+
+  if (btn) { btn.textContent = 'Connecting...'; btn.disabled = true; }
+
+  try {
+    await loadMSAL();
+
+    // Redirect URI must exactly match what you registered in Azure
+    // Use the current page URL without query/hash
+    const redirectUri = window.location.origin + window.location.pathname;
+
+    const config = {
+      auth: {
+        clientId: clientId.trim(),
+        authority: `https://login.microsoftonline.com/${tenantId}`,
+        redirectUri
+      },
+      cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: true }
+    };
+
+    msalInstance = new msal.PublicClientApplication(config);
+    await msalInstance.initialize();
+
+    const scopes = ['User.Read', 'Mail.Read', 'Calendars.Read', 'Tasks.ReadWrite'];
+
+    // Always use loginPopup — most reliable for SPA on hosted pages
+    const tokenResp = await msalInstance.loginPopup({
+      scopes,
+      prompt: 'select_account'
+    });
+
+    msAccessToken = tokenResp.accessToken;
+
+    // Get user profile to confirm connection
+    const me = await msGraphGet('https://graph.microsoft.com/v1.0/me');
+
+    // Persist config
+    sessionStorage.setItem('ms_client_id', clientId.trim());
+    sessionStorage.setItem('ms_tenant_id', tenantId);
+
+    onMSConnected(me);
+    // Auto-load all data immediately after connecting
+    setTimeout(() => { loadAllMSData(); loadProjectsFromOutlook(); }, 500);
+
+  } catch(e) {
+    const msg = e.errorMessage || e.message || JSON.stringify(e);
+    errEl.style.display = 'block';
+
+    // Give friendly messages for common errors
+    if (msg.includes('popup_window_error') || msg.includes('popups')) {
+      errEl.textContent = '⚠ Popup was blocked. Please allow popups for this site in your browser settings, then try again.';
+    } else if (msg.includes('redirect_uri') || msg.includes('AADSTS50011')) {
+      errEl.textContent = '⚠ Redirect URI mismatch. In Azure, make sure the redirect URI is set to exactly: ' + (window.location.origin + window.location.pathname);
+    } else if (msg.includes('AADSTS700016') || msg.includes('not found')) {
+      errEl.textContent = '⚠ App not found. Double-check your Client ID — it should match exactly what Azure shows.';
+    } else if (msg.includes('consent') || msg.includes('AADSTS65001')) {
+      errEl.textContent = '⚠ Permissions not granted. Go to Azure → API permissions → Grant admin consent, then try again.';
+    } else if (msg.includes('user_cancelled') || msg.includes('cancelled')) {
+      errEl.textContent = '⚠ Sign-in was cancelled. Please try again.';
+    } else {
+      errEl.textContent = '⚠ Sign-in failed: ' + msg;
+    }
+  } finally {
+    if (btn) { btn.textContent = 'Sign in with Microsoft 365'; btn.disabled = false; }
+  }
+}
+
+function onMSConnected(me) {
+  document.getElementById('conn-setup-card').style.display = 'none';
+  document.getElementById('conn-ms-connected').style.display = 'block';
+  document.getElementById('ms-user-name').textContent = me.displayName || 'Microsoft User';
+  document.getElementById('ms-user-email').textContent = me.mail || me.userPrincipalName || '';
+  // Hide warning badges
+  const bm = document.getElementById('conn-badge-m');
+  const bs = document.getElementById('conn-badge-s');
+  if (bm) bm.style.display = 'none';
+  if (bs) bs.style.display = 'none';
+  toast('✓ Microsoft 365 connected as ' + (me.displayName || me.mail));
+}
+
+async function msSignOut() {
+  msAccessToken = null; msalInstance = null;
+  sessionStorage.removeItem('ms_client_id');
+  sessionStorage.removeItem('ms_tenant_id');
+  document.getElementById('conn-ms-connected').style.display = 'none';
+  document.getElementById('conn-setup-card').style.display = 'block';
+  document.getElementById('conn-data-card').style.display = 'none';
+  document.getElementById('conn-badge-m') && (document.getElementById('conn-badge-m').style.display = '');
+  toast('Signed out of Microsoft 365');
+}
+
+async function msGraphGet(url) {
+  const res = await fetch(url, { headers: { Authorization: 'Bearer ' + msAccessToken } });
+  if (!res.ok) throw new Error('Graph API error: ' + res.status);
+  return res.json();
+}
+
+async function ensureToken() {
+  if (!msAccessToken) { toast('Please connect Microsoft 365 first'); showTab('connections', null, 'm'); return false; }
+  return true;
+}
+
+// ── Load ALL Microsoft data at once and push to every section ──
+async function loadAllMSData() {
+  if (!await ensureToken()) return;
+  toast('Loading your Microsoft 365 data...');
+  try {
+    await Promise.all([loadMSEmails(), loadMSCalendar(), loadMSTasks(), loadProjectsFromOutlook()]);
+    toast('✓ All sections updated with your real data');
+  } catch(e) {
+    toast('Some data failed to load — check Connections tab');
+  }
+}
+
+// ── Emails → Email Tracker tab + Connections preview + Dashboard metric ──
+async function loadMSEmails() {
+  if (!await ensureToken()) return;
+
+  // Show loading in connections panel
+  showConnData('Your recent emails', '<div style="color:var(--muted);font-style:italic;font-size:13px">Loading emails...</div>');
+
+  try {
+    const data = await msGraphGet('https://graph.microsoft.com/v1.0/me/messages?$top=20&$select=subject,from,receivedDateTime,isRead,bodyPreview,conversationId,categories&$orderby=receivedDateTime desc');
+    const emails = data.value || [];
+
+    // ── 1. Update Connections preview panel ──
+    showConnData('Your recent emails', emails.length === 0
+      ? '<div style="color:var(--muted)">No emails found.</div>'
+      : emails.slice(0,8).map(m => {
+          const from = m.from?.emailAddress?.name || m.from?.emailAddress?.address || 'Unknown';
+          const date = new Date(m.receivedDateTime).toLocaleDateString('en-ZA',{day:'numeric',month:'short'});
+          return `<div style="padding:9px 0;border-bottom:1px solid var(--border)">
+            <div style="display:flex;justify-content:space-between;gap:8px">
+              <div style="font-size:12px;font-weight:${!m.isRead?'600':'400'};color:${!m.isRead?'var(--text)':'var(--muted)'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px">${escHtml(from)}</div>
+              <div style="font-size:10px;color:var(--muted);white-space:nowrap;font-family:var(--mono)">${date}</div>
+            </div>
+            <div style="font-size:13px;margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:${!m.isRead?'500':'400'}">${escHtml(m.subject||'(no subject)')}</div>
+            <div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml((m.bodyPreview||'').substring(0,90))}</div>
+          </div>`;
+        }).join('')
+    );
+
+    // ── 2. Update Email Tracker tab — replace demo data entirely ──
+    const trackerCard = document.querySelector('#tab-tracker .card');
+    if (trackerCard) {
+      const seen = new Set();
+      const unique = emails.filter(m => {
+        const a = m.from?.emailAddress?.address;
+        if (!a || seen.has(a)) return false;
+        seen.add(a); return true;
+      }).slice(0, 8);
+
+      const unreadCount = emails.filter(m => !m.isRead).length;
+
+      trackerCard.innerHTML = `<div class="card-title">Your inbox <span class="pill pill-${unreadCount>0?'red':'green'}">${unreadCount} unread</span></div>`
+        + unique.map(m => {
+          const addr = m.from?.emailAddress?.address || '';
+          const name = m.from?.emailAddress?.name || addr;
+          const date = new Date(m.receivedDateTime).toLocaleDateString('en-ZA',{day:'numeric',month:'short'});
+          const isOv48 = isOverdue48h(m, emails);
+          const isDl = hasDeadlineFlag(m);
+          return `<div class="tracker-row">
+            <span class="dot ${isOv48 ? 'dot-red' : isUnread ? 'dot-amber' : 'dot-green'}"></span>
+            <div class="tracker-info">
+              <div class="tracker-email">${escHtml(name)}</div>
+              <div class="tracker-last">"${escHtml((m.subject||'').substring(0,55))}" · ${date}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-end;flex-shrink:0">
+              ${isOv48 ? '<span class="pill pill-red" style="font-size:9px">48h overdue</span>' : isUnread ? '<span class="pill pill-amber" style="font-size:9px">Unread</span>' : '<span class="pill pill-green" style="font-size:9px">Read</span>'}
+              ${isDl ? '<span class="pill pill-amber" style="font-size:9px">deadline</span>' : ''}
+            </div>
+          </div>`;
+        }).join('');
+
+      // update email badge on nav
+      document.querySelectorAll('.nav-badge').forEach(b => {
+        if (b.closest('.nav-item') && b.closest('.nav-item').textContent.includes('Email')) b.textContent = unreadCount;
+      });
+    }
+
+    // ── 3. Update Dashboard email metric ──
+    const metrics = document.querySelectorAll('.metric');
+    if (metrics[3]) {
+      const unread = emails.filter(m => !m.isRead).length;
+      const overdue48 = emails.filter(e => isOverdue48h(e, emails)).length;
+      metrics[3].querySelector('.metric-val').textContent = unread;
+      metrics[3].querySelector('.metric-lbl').textContent = overdue48 > 0 ? `Unread · ${overdue48} overdue 48h` : 'Unread emails';
+    }
+
+    // ── 3b. Dashboard deadline flag ──
+    const deadlineCount = emails.filter(e => hasDeadlineFlag(e)).length;
+    if (deadlineCount > 0) {
+      let dboard = document.getElementById('dash-deadline-flag');
+      if (!dboard) {
+        dboard = document.createElement('div');
+        dboard.id = 'dash-deadline-flag';
+        dboard.className = 'ai-box';
+        dboard.style.borderLeftColor = 'var(--warning)';
+        dboard.style.marginBottom = '12px';
+        const metricParent = document.querySelector('#tab-dashboard .metrics');
+        if (metricParent) metricParent.after(dboard);
+      }
+      dboard.innerHTML = `<div class="ai-label" style="color:var(--warning)">📅 Deadline alert</div>
+        <div class="ai-text" style="font-size:12px">${deadlineCount} recent email${deadlineCount>1?'s contain':'contains'} a deadline or date reference. Check the Email Tracker or open affected projects for details.</div>`;
+    }
+
+    // ── 4. Wire up email tracker assistant with real context ──
+    window._emailContext = emails.slice(0,10).map(m =>
+      `From: ${m.from?.emailAddress?.name||m.from?.emailAddress?.address}, Subject: "${m.subject}", Date: ${new Date(m.receivedDateTime).toLocaleDateString()}, Read: ${m.isRead}`
+    ).join('\n');
+
+    // ── 5. Detect needs-attention threads and idle→active upgrades ──
+    if (Object.keys(_projects).length > 0) {
+      const { attentionCount, attentionProjects } = detectNeedsAttention(emails);
+      updateDashboardAttention(attentionProjects);
+      if (attentionCount > 0) renderProjectList();
+    }
+
+  } catch(e) {
+    showConnData('Email error', `<div style="color:var(--danger)">Error: ${escHtml(e.message)}</div>`);
+  }
+}
+
+// ── Calendar → Schedule tab + Connections preview ──
+async function loadMSCalendar() {
+  if (!await ensureToken()) return;
+  showConnData('Your upcoming calendar', '<div style="color:var(--muted);font-style:italic;font-size:13px">Loading calendar...</div>');
+  try {
+    const start = new Date().toISOString();
+    const end = new Date(Date.now() + 7*24*60*60*1000).toISOString();
+    const data = await msGraphGet(`https://graph.microsoft.com/v1.0/me/calendarview?startDateTime=${start}&endDateTime=${end}&$top=20&$select=subject,start,end,location,organizer,isOnlineMeeting,onlineMeetingUrl&$orderby=start/dateTime`);
+    const events = data.value || [];
+
+    // ── 1. Update Schedule tab with minute taker annotations ──
+    renderMeetingScheduleWithMT(events);
+
+    // ── 2. Update Connections preview ──
+    const previewFmt = e => {
+      const s = new Date(e.start.dateTime + (e.start.timeZone==='UTC'?'Z':''));
+      const en = new Date(e.end.dateTime + (e.end.timeZone==='UTC'?'Z':''));
+      const dateStr = s.toLocaleDateString('en-ZA',{weekday:'short',day:'numeric',month:'short'});
+      const timeStr = s.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'}) + ' – ' + en.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'});
+      const loc = e.location?.displayName || (e.isOnlineMeeting ? 'Online' : 'Meeting');
+      return `<div class="sched-row"><div class="sched-time">${dateStr}<br><span style="font-size:9px">${timeStr}</span></div><div class="sched-block sched-meeting"><div class="sched-name">${escHtml(e.subject||'(no title)')}</div><div class="sched-sub">${escHtml(loc)}</div></div></div>`;
+    };
+    showConnData('Your upcoming calendar', events.length === 0 ? '<div style="color:var(--muted)">No upcoming events.</div>' : events.map(previewFmt).join(''));
+
+    // ── 3. Update Dashboard meeting count ──
+    const todayCount = events.filter(e => {
+      const s = new Date(e.start.dateTime + (e.start.timeZone==='UTC'?'Z':''));
+      return s.toDateString() === new Date().toDateString();
+    }).length;
+    document.getElementById('topbar-sub').textContent =
+      now.toLocaleDateString('en-ZA',{weekday:'long'}) + ` · ${todayCount} meeting${todayCount!==1?'s':''} today`;
+
+    // Store context for AI schedule assistant
+    window._calContext = events.slice(0,10).map(e =>
+      `"${e.subject}" on ${new Date(e.start.dateTime+(e.start.timeZone==='UTC'?'Z':'')).toLocaleString()}`
+    ).join(', ');
+
+  } catch(e) {
+    showConnData('Calendar error', `<div style="color:var(--danger)">Error: ${escHtml(e.message)}</div>`);
+  }
+}
+
+// ── Tasks → Dashboard urgent/in-progress cards ──
+async function loadMSTasks() {
+  if (!await ensureToken()) return;
+  showConnData('Your Microsoft To Do tasks', '<div style="color:var(--muted);font-style:italic;font-size:13px">Loading tasks...</div>');
+  try {
+    const lists = await msGraphGet('https://graph.microsoft.com/v1.0/me/todo/lists');
+    if (!lists.value || lists.value.length === 0) {
+      showConnData('Tasks', '<div style="color:var(--muted)">No task lists found.</div>');
+      return;
+    }
+
+    // Fetch tasks from all lists (up to 5)
+    let allTasks = [];
+    for (const list of lists.value.slice(0,5)) {
+      try {
+        const tasks = await msGraphGet(
+          `https://graph.microsoft.com/v1.0/me/todo/lists/${list.id}/tasks?$filter=status ne 'completed'&$top=15&$select=title,dueDateTime,importance,status,createdDateTime`
+        );
+        if (tasks.value) allTasks = allTasks.concat(tasks.value.map(t => ({...t, _listName: list.displayName})));
+      } catch { /* skip list if error */ }
+    }
+
+    const today = new Date(); today.setHours(0,0,0,0);
+
+    const overdue = allTasks.filter(t => t.dueDateTime && new Date(t.dueDateTime.dateTime) < today);
+    const dueThisWeek = allTasks.filter(t => {
+      if (!t.dueDateTime) return false;
+      const d = new Date(t.dueDateTime.dateTime);
+      const weekEnd = new Date(today); weekEnd.setDate(today.getDate()+7);
+      return d >= today && d <= weekEnd;
+    });
+    const noDue = allTasks.filter(t => !t.dueDateTime);
+    const high = allTasks.filter(t => t.importance === 'high');
+
+    // ── 1. Update Connections preview ──
+    const connHtml = allTasks.length === 0
+      ? '<div style="color:var(--muted)">No incomplete tasks found.</div>'
+      : lists.value.slice(0,5).map(list => {
+          const listTasks = allTasks.filter(t => t._listName === list.displayName);
+          if (!listTasks.length) return '';
+          return `<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin:10px 0 6px">${escHtml(list.displayName)}</div>`
+            + listTasks.map(t => {
+                const due = t.dueDateTime ? new Date(t.dueDateTime.dateTime).toLocaleDateString('en-ZA',{day:'numeric',month:'short'}) : '';
+                const isOverdue = due && new Date(t.dueDateTime.dateTime) < today;
+                return `<div class="task-row">
+                  <span class="dot ${isOverdue?'dot-red':t.importance==='high'?'dot-amber':'dot-gray'}"></span>
+                  <span class="task-name">${escHtml(t.title)}</span>
+                  ${due?`<span class="task-meta" style="${isOverdue?'color:var(--danger)':''}">${isOverdue?'Overdue':due}</span>`:''}
+                </div>`;
+              }).join('');
+        }).join('');
+    showConnData('Your tasks', connHtml);
+
+    // ── 2. Replace Dashboard urgent card ──
+    const urgentCard = document.querySelector('#tab-dashboard .card:first-of-type');
+    if (urgentCard) {
+      const urgentTasks = [...overdue, ...high.filter(t => !overdue.includes(t))].slice(0,5);
+      urgentCard.innerHTML = `<div class="card-title">Overdue & high priority <span class="pill pill-red">${overdue.length} overdue</span></div>`
+        + (urgentTasks.length === 0
+          ? '<div style="color:var(--muted);font-size:13px;padding:8px 0">No overdue tasks 🎉</div>'
+          : urgentTasks.map(t => {
+              const due = t.dueDateTime ? new Date(t.dueDateTime.dateTime).toLocaleDateString('en-ZA',{day:'numeric',month:'short'}) : '';
+              const isOverdue = due && new Date(t.dueDateTime.dateTime) < today;
+              return `<div class="task-row">
+                <span class="dot ${isOverdue?'dot-red':'dot-amber'}"></span>
+                <span class="task-name">${escHtml(t.title)}</span>
+                <span class="task-meta" style="${isOverdue?'color:var(--danger)':''}">${isOverdue?'Overdue':due||t._listName}</span>
+              </div>`;
+            }).join('')
+        );
+    }
+
+    // ── 3. Replace Dashboard in-progress card ──
+    const inProgressCard = document.querySelectorAll('#tab-dashboard .card')[1];
+    if (inProgressCard) {
+      const inProgress = dueThisWeek.slice(0,6);
+      const other = noDue.slice(0, Math.max(0, 6-inProgress.length));
+      const combined = [...inProgress, ...other].slice(0,6);
+      inProgressCard.innerHTML = `<div class="card-title">In progress & due this week</div>`
+        + (combined.length === 0
+          ? '<div style="color:var(--muted);font-size:13px;padding:8px 0">No tasks due this week</div>'
+          : combined.map(t => {
+              const due = t.dueDateTime ? new Date(t.dueDateTime.dateTime).toLocaleDateString('en-ZA',{day:'numeric',month:'short'}) : '';
+              return `<div class="task-row">
+                <span class="dot ${t.importance==='high'?'dot-amber':'dot-green'}"></span>
+                <span class="task-name">${escHtml(t.title)}</span>
+                <span class="task-meta">${due||t._listName}</span>
+              </div>`;
+            }).join('')
+        );
+    }
+
+    // ── 4. Update Dashboard metrics ──
+    const metricEls = document.querySelectorAll('.metric');
+    if (metricEls[0]) { metricEls[0].querySelector('.metric-val').textContent = overdue.length; metricEls[0].querySelector('.metric-val').className = 'metric-val ' + (overdue.length>0?'danger':'success'); }
+    if (metricEls[1]) { metricEls[1].querySelector('.metric-val').textContent = dueThisWeek.length; }
+    if (metricEls[2]) { metricEls[2].querySelector('.metric-val').textContent = allTasks.length; metricEls[2].querySelector('.metric-lbl').textContent = 'Open tasks'; }
+
+    // Store task context for AI
+    window._taskContext = allTasks.slice(0,15).map(t =>
+      `"${t.title}" (list: ${t._listName}, due: ${t.dueDateTime?new Date(t.dueDateTime.dateTime).toLocaleDateString():'no date'}, priority: ${t.importance})`
+    ).join('\n');
+
+  } catch(e) {
+    showConnData('Tasks error', `<div style="color:var(--danger)">Error: ${escHtml(e.message)}</div>`);
+  }
+}
+
+// ── DOMAIN FILTERING ─────────────────────────────────────
+// Emails from these domains are "internal" and won't appear in people lists
+let _myDomains = ['finex','finexmoney','imaliexpress'];
+
+function saveDomains() { sessionStorage.setItem('my_domains', JSON.stringify(_myDomains)); }
+function loadDomains() {
+  try { const d = JSON.parse(sessionStorage.getItem('my_domains')); if(d) _myDomains = d; } catch {}
+}
+function isInternalEmail(addr) {
+  if (!addr) return true;
+  const lower = addr.toLowerCase();
+  return _myDomains.some(d => lower.includes(d.toLowerCase()));
+}
+function renderDomainList() {
+  const el = document.getElementById('domain-list');
+  if (!el) return;
+  el.innerHTML = _myDomains.map(d =>
+    `<div class="person-chip" style="gap:6px">
+      <span style="font-family:var(--mono);font-size:11px">${escHtml(d)}</span>
+      <span onclick="removeDomain('${escHtml(d)}')" style="cursor:pointer;color:var(--danger);font-size:12px;line-height:1">×</span>
+    </div>`
+  ).join('');
+}
+function addDomain() {
+  const inp = document.getElementById('new-domain');
+  const val = inp.value.trim().toLowerCase().replace(/^@/,'');
+  if (!val || _myDomains.includes(val)) { toast('Domain already added or empty'); return; }
+  _myDomains.push(val); saveDomains(); renderDomainList();
+  inp.value = ''; toast(`✓ "${val}" added — people from this domain will be hidden`);
+}
+function removeDomain(d) {
+  _myDomains = _myDomains.filter(x => x !== d); saveDomains(); renderDomainList();
+}
+
+// Filter people in a project — only show external contacts
+function getExternalPeople(peopleMap) {
+  return Object.entries(peopleMap).filter(([addr]) => !isInternalEmail(addr));
+}
+
+// ── SETTINGS — category list ──────────────────────────────
+let _settingsFilter = 'all';
+
+function filterSettings(f) {
+  _settingsFilter = f;
+  ['all','active','idle','parked'].forEach(s => {
+    const btn = document.getElementById('sf-' + s);
+    if (!btn) return;
+    btn.style.background = s === f ? 'var(--accent)' : '';
+    btn.style.color = s === f ? '#fff' : '';
+    btn.style.borderColor = s === f ? 'var(--accent)' : '';
+  });
+  renderSettingsCategoryList();
+}
+
+function renderSettingsCategoryList() {
+  const el = document.getElementById('settings-cat-list');
+  if (!el) return;
+
+  const all = Object.values(_projects).filter(p => !_excludedCategories.has(p.name));
+  const manual = _manualProjects.filter(p => !_projects[p.name]);
+  const combined = [...all, ...manual.map(p => ({...p, _isManual: true}))];
+
+  const filtered = _settingsFilter === 'all' ? combined : combined.filter(p => {
+    const s = getEffectiveStatus(p.name, p);
+    if (_settingsFilter === 'idle') return ['idle','quiet'].includes(s);
+    if (_settingsFilter === 'parked') return s === 'parked';
+    if (_settingsFilter === 'active') return ['active','on-track','needs-attention'].includes(s);
+    return true;
+  });
+
+  if (combined.length === 0) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;font-style:italic">Connect and sync Outlook projects first.</div>';
+    return;
+  }
+  if (filtered.length === 0) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0">No categories match this filter.</div>';
+    return;
+  }
+
+  // Build rows as DOM nodes — avoids all JSON/quote escaping issues in onclick
+  el.innerHTML = '';
+  filtered.forEach(p => {
+    const eff = getEffectiveStatus(p.name, p);
+    const isActive = ['active','on-track','needs-attention'].includes(eff);
+    const isIdle   = ['idle','quiet'].includes(eff);
+    const isParked = eff === 'parked';
+    const col = p.colour || 'var(--accent)';
+    const statusText = isActive ? 'Active' : isParked ? 'Parked' : 'Idle';
+    const statusColor = isActive ? 'var(--success)' : isParked ? 'var(--warning)' : 'var(--muted)';
+
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap';
+
+    // Colour dot + name
+    const info = document.createElement('div');
+    info.style.cssText = 'display:flex;align-items:center;gap:8px;flex:1;min-width:120px';
+    info.innerHTML = `<div style="width:10px;height:10px;border-radius:50%;background:${col};flex-shrink:0"></div>
+      <div>
+        <div style="font-size:13px;font-weight:500">${escHtml(p.name)}</div>
+        <div style="font-size:10px;color:var(--muted)">${p._isManual?'Manual':'Outlook'} · ${p.total||0} emails · <span style="color:${statusColor}">${statusText}</span></div>
+      </div>`;
+    row.appendChild(info);
+
+    // Buttons — created via DOM, no inline onclick strings
+    const btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;gap:4px;flex-wrap:wrap;flex-shrink:0';
+
+    const makeBtn = (label, isSelected, clickFn, extraStyle) => {
+      const b = document.createElement('button');
+      b.className = 'btn btn-sm';
+      b.textContent = label;
+      if (isSelected) Object.assign(b.style, extraStyle || {background:'var(--accent)', color:'#fff', borderColor:'var(--accent)'});
+      b.addEventListener('click', clickFn);
+      return b;
+    };
+
+    btns.appendChild(makeBtn('Active', isActive, () => setProjectStatus(p.name, 'active')));
+    btns.appendChild(makeBtn('Idle',   isIdle,   () => setProjectStatus(p.name, 'idle'),   {background:'var(--surface2)', color:'var(--text)', borderColor:'var(--border2)'}));
+    btns.appendChild(makeBtn('Park',   isParked, () => setProjectStatus(p.name, 'parked'), {background:'var(--warning)', color:'#000', borderColor:'var(--warning)'}));
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'btn btn-sm btn-danger';
+    removeBtn.textContent = 'Remove';
+    removeBtn.addEventListener('click', () => removeCategory(p.name));
+    btns.appendChild(removeBtn);
+
+    row.appendChild(btns);
+    el.appendChild(row);
+  });
+}
+
+function getEffectiveStatus(name, p) {
+  return _manualStatus[name] || (p ? p.status : 'idle');
+}
+
+function removeCategory(name) {
+  if (!confirm(`Remove "${name}" from projects? It will no longer be treated as a project. You can restore it by clearing removed categories.`)) return;
+  _excludedCategories.add(name);
+  delete _projects[name];
+  _manualProjects = _manualProjects.filter(p => p.name !== name);
+  saveManualStatus();
+  renderProjectList();
+  renderSettingsCategoryList();
+  toast(`"${name}" removed from projects`);
+}
+
+function setProjectStatus(name, newStatus) {
+  _manualStatus[name] = newStatus;
+  if (_projects[name]) _projects[name].status = newStatus;
+  saveManualStatus();
+  renderSettingsCategoryList();
+  renderProjectList();
+  toast(`"${name}" → ${newStatus}`);
+}
+
+// ── MANUAL PROJECT CREATION ───────────────────────────────
+let _manualProjects = [];
+function loadManualProjects() {
+  try { _manualProjects = JSON.parse(sessionStorage.getItem('manual_projects')||'[]'); } catch { _manualProjects = []; }
+}
+function saveManualProjects() { sessionStorage.setItem('manual_projects', JSON.stringify(_manualProjects)); }
+
+function createManualProject() {
+  const name = document.getElementById('new-proj-name').value.trim();
+  const desc = document.getElementById('new-proj-desc').value.trim();
+  const status = document.getElementById('new-proj-status').value;
+  const confirm = document.getElementById('new-proj-confirm');
+  if (!name) { toast('Please enter a project name'); return; }
+  if (_projects[name] || _manualProjects.find(p=>p.name===name)) { toast('A project with that name already exists'); return; }
+
+  const proj = {
+    name, description: desc, status, colour: 'var(--accent)',
+    emails: [], people: {}, tasks: [], total: 0, unread: 0,
+    daysSince: 999, latest: null, isInInboxOrSent: false,
+    isPerson: false, _isManual: true
+  };
+  _manualProjects.push(proj);
+  saveManualProjects();
+  // Also inject into _projects so it appears in the project list
+  _projects[name] = proj;
+  _manualStatus[name] = status;
+  saveManualStatus();
+
+  document.getElementById('new-proj-name').value = '';
+  document.getElementById('new-proj-desc').value = '';
+  confirm.style.display = 'block';
+  confirm.textContent = `✓ Project "${name}" created`;
+  renderProjectList();
+  renderSettingsCategoryList();
+  toast(`✓ "${name}" added to projects`);
+}
+
+// ── NEEDS-ATTENTION: detect reply threads ─────────────────
+// When emails load, find categories where new mail arrived on existing subject
+function detectNeedsAttention(emails) {
+  // Group by category
+  const byCat = {};
+  emails.forEach(e => {
+    (e.categories||[]).forEach(cat => {
+      if (!byCat[cat]) byCat[cat] = [];
+      byCat[cat].push(e);
+    });
+  });
+
+  let attentionCount = 0;
+  const attentionProjects = [];
+
+  Object.entries(byCat).forEach(([cat, catEmails]) => {
+    const p = _projects[cat];
+    if (!p) return;
+    // Find threads (same subject) with unread replies
+    const subjects = {};
+    catEmails.forEach(e => {
+      const subj = (e.subject||'').replace(/^(re:|fwd?:|fw:)\s*/i,'').trim().toLowerCase();
+      if (!subjects[subj]) subjects[subj] = [];
+      subjects[subj].push(e);
+    });
+    const hasReplyThread = Object.values(subjects).some(thread =>
+      thread.length > 1 && thread.some(e => !e.isRead)
+    );
+    if (hasReplyThread) {
+      attentionCount++;
+      attentionProjects.push(cat);
+      if (_projects[cat]) _projects[cat].status = 'needs-attention';
+    }
+    // Idle → active: if idle/quiet and new email received, upgrade to active
+    if (p && ['idle','quiet'].includes(_manualStatus[cat]||p.autoStatus||'')) {
+      const recentEmail = catEmails.find(e => {
+        const age = (Date.now() - new Date(e.receivedDateTime)) / 3600000;
+        return age < 24; // within last 24 hours
+      });
+      if (recentEmail) {
+        // Only upgrade if NOT parked
+        if (_manualStatus[cat] !== 'parked') {
+          _manualStatus[cat] = 'active';
+          if (_projects[cat]) _projects[cat].status = 'active';
+          toast(`"${cat}" activated — new email received`);
+        }
+      }
+    }
+  });
+
+  if (attentionCount > 0) saveManualStatus();
+  return { attentionCount, attentionProjects };
+}
+
+// Update the needs-attention dashboard card to show clickable projects
+function updateDashboardAttention(attentionProjects) {
+  const metricEl = document.querySelector('.metric:first-child');
+  if (!metricEl) return;
+  metricEl.style.cursor = 'pointer';
+  metricEl.title = 'Click to see projects needing attention';
+  metricEl.onclick = () => {
+    showTab('projects', null, 'm');
+    // highlight attention projects
+    setTimeout(() => {
+      if (attentionProjects.length > 0) openOutlookProj(attentionProjects[0]);
+    }, 200);
+  };
+}
+
+// ── PATCH: override people display to filter internal domains ──
+// Called after openOutlookProj sets up people
+function applyPeopleFilter(projName) {
+  const p = _projects[projName];
+  if (!p) return;
+  const external = getExternalPeople(p.people);
+  const el = document.getElementById('proj-people');
+  if (!el) return;
+  el.innerHTML = external.length === 0
+    ? '<div style="color:var(--muted);font-size:12px">No external contacts — all participants are internal</div>'
+    : external.map(([addr, name2]) => {
+        const initials = name2.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+        const colour = p.colour || 'var(--accent)';
+        return `<div class="person-chip" title="${escHtml(addr)}">
+          <div class="person-avatar" style="background:${colour}">${initials}</div>
+          ${escHtml(name2)}
+        </div>`;
+      }).join('');
+}
+
+
+function showConnData(title, html) {
+  const card = document.getElementById('conn-data-card');
+  const content = document.getElementById('conn-data-content');
+  const titleEl = document.getElementById('conn-data-title');
+  if (card) card.style.display = 'block';
+  if (titleEl) titleEl.textContent = title;
+  if (content) content.innerHTML = html;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Scroll & Theme ────────────────────────────────────────
+function scrollContent(delta) {
+  // Target by id for reliability — querySelector can fail if class not found
+  const el = document.getElementById('main-content-area') || document.querySelector('.content-area');
+  if (el) el.scrollBy({ top: delta, behavior: 'smooth' });
+}
+
+let _isLightTheme = false;
+function toggleTheme() {
+  _isLightTheme = !_isLightTheme;
+  document.body.classList.toggle('light', _isLightTheme);
+  const btn = document.getElementById('theme-btn');
+  if (btn) btn.textContent = _isLightTheme ? '🌑' : '🌙';
+  sessionStorage.setItem('chief_theme', _isLightTheme ? 'light' : 'dark');
+}
+window.addEventListener('load', () => {
+  const uri = window.location.origin + window.location.pathname;
+  const el = document.getElementById('redirect-uri-display');
+  if (el) el.textContent = uri;
+
+  const savedId = sessionStorage.getItem('ms_client_id');
+  if (savedId) {
+    const cidEl = document.getElementById('ms-client-id');
+    if (cidEl) cidEl.value = savedId;
+    const tid = sessionStorage.getItem('ms_tenant_id');
+    const tidEl = document.getElementById('ms-tenant-id');
+    if (tid && tidEl) tidEl.value = tid;
+  }
+
+  // Restore theme
+  if (sessionStorage.getItem('chief_theme') === 'light') {
+    _isLightTheme = true;
+    document.body.classList.add('light');
+    const tb = document.getElementById('theme-btn');
+    if (tb) tb.textContent = '🌑';
+  }
+
+  // Init settings data
+  loadDomains();
+  loadManualProjects();
+  loadManualStatus();
+  renderDomainList();
+
+  // Load minutes library
+  try {
+    const saved = sessionStorage.getItem('minutes_library');
+    if (saved) { window._minutesLibrary = JSON.parse(saved); refreshMinutesLibraryUI(); }
+  } catch {}
+
+  // Load minute taker data
+  loadMTData();
+  renderMTList();
+  renderExcludedList();
+
+  // Init dashboard metric click handlers
+  initDashMetrics();
+});
+
+</script>
+</body>
+</html>
