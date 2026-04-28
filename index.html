@@ -1660,6 +1660,8 @@ function handleProjClick(name) {
     }, 300);
   }
 }
+
+function excludeCategory(name) {
   _excludedCategories.add(name);
   saveManualStatus();
   delete _projects[name];
