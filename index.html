@@ -1192,6 +1192,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
 <script>
 const CLAUDE = "claude-sonnet-4-20250514";
+
+// ── AI PROXY URL ──────────────────────────────────────────
+// After setting up your Cloudflare Worker, paste its URL here:
+// e.g. window.AI_PROXY_URL = 'https://chief-ai.yourname.workers.dev';
+// Leave blank to use Netlify Functions (/.netlify/functions/claude)
+window.AI_PROXY_URL = '';
 let currentProj = "";
 let openMinuteTitle = "";
 let recState = "idle";
@@ -1278,8 +1284,10 @@ async function callClaude(prompt, elId, showElId) {
   el.classList.add('thinking');
   el.textContent = 'Thinking...';
   try {
-    // Call through Netlify serverless proxy — keeps API key secure on server
-    const res = await fetch('/.netlify/functions/claude', {
+    // AI proxy URL — update PROXY_URL below with your Cloudflare Worker URL
+    // after setting it up at workers.cloudflare.com
+    const PROXY_URL = window.AI_PROXY_URL || '/.netlify/functions/claude';
+    const res = await fetch(PROXY_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1614,10 +1622,7 @@ function renderProjectList() {
     const deadlineCount = p.emails ? p.emails.filter(e => hasDeadlineFlag(e)).length : 0;
 
     const safeName = JSON.stringify(p.name);
-    return `<div class="proj-card${isSelected?' active':''}" style="--proj-color:${p.colour};${isDim?'opacity:0.65':''}"
-      onclick="openOutlookProj(${safeName})"
-      ondblclick="openOutlookProj(${safeName}, true)"
-      title="Click to select · Double-click for instant summary">
+    return `<div class="proj-card${isSelected?' active':''}" style="--proj-color:${p.colour};${isDim?'opacity:0.65':''}" onclick="handleProjClick(${safeName})" title="Click to select · Double-click for full summary">
       <div class="proj-card-header">
         <div class="proj-card-dot" style="background:${p.colour}"></div>
         <div class="proj-card-name">${escHtml(p.name)}</div>
@@ -1634,7 +1639,27 @@ function renderProjectList() {
   }).join('');
 }
 
-function excludeCategory(name) {
+// ── Click timer for single vs double click on project cards ──
+let _clickTimer = null;
+let _clickTarget = null;
+
+function handleProjClick(name) {
+  if (_clickTimer && _clickTarget === name) {
+    // Second click within 300ms = double click → full summary
+    clearTimeout(_clickTimer);
+    _clickTimer = null;
+    _clickTarget = null;
+    openOutlookProj(name, true);
+  } else {
+    // First click — wait to see if double
+    _clickTarget = name;
+    _clickTimer = setTimeout(() => {
+      _clickTimer = null;
+      _clickTarget = null;
+      openOutlookProj(name, false);
+    }, 300);
+  }
+}
   _excludedCategories.add(name);
   saveManualStatus();
   delete _projects[name];
@@ -2134,13 +2159,38 @@ function renderMeetingScheduleWithMT(events) {
     const loc = e.location?.displayName || (e.isOnlineMeeting ? 'Online meeting' : 'Meeting');
     const title = e.subject || '(no title)';
     const isExcluded = _mtExclusions[title];
-    const mtNote = hasMT && !isExcluded
-      ? `<div style="font-size:10px;color:var(--success);margin-top:3px">🎙 ${_minuteTakers.map(mt=>mt.name).join(', ')} taking minutes</div>`
-      : (hasMT && isExcluded ? '<div style="font-size:10px;color:var(--muted);margin-top:3px">No minute taker</div>' : '');
-    return `<div class="sched-row">
+
+    // Check if YOU are attending — responseStatus: accepted, tentativelyAccepted, notResponded, declined
+    const myResponse = e.responseStatus?.response || 'notResponded';
+    const iDeclined = myResponse === 'declined';
+    const iCancelled = e.isCancelled === true;
+    const iAmAttending = !iDeclined && !iCancelled;
+
+    // Minute taker only joins if: MT configured + not excluded + YOU are attending
+    let mtNote = '';
+    if (hasMT && iAmAttending && !isExcluded) {
+      mtNote = `<div style="font-size:10px;color:var(--success);margin-top:3px">🎙 ${_minuteTakers.map(mt=>mt.name).join(', ')} taking minutes</div>`;
+    } else if (hasMT && iAmAttending && isExcluded) {
+      mtNote = '<div style="font-size:10px;color:var(--muted);margin-top:3px">No minute taker for this meeting</div>';
+    } else if (iDeclined) {
+      mtNote = '<div style="font-size:10px;color:var(--muted);margin-top:3px">Declined — minute taker not joining</div>';
+    } else if (iCancelled) {
+      mtNote = '<div style="font-size:10px;color:var(--muted);margin-top:3px">Cancelled</div>';
+    }
+
+    // Response badge
+    const responseBadge = {
+      'accepted': '',
+      'tentativelyAccepted': '<span style="font-size:9px;color:var(--warning);margin-left:4px">Maybe</span>',
+      'declined': '<span style="font-size:9px;color:var(--danger);margin-left:4px">Declined</span>',
+      'notResponded': '<span style="font-size:9px;color:var(--muted);margin-left:4px">Not responded</span>',
+      'organizer': ''
+    }[myResponse] || '';
+
+    return `<div class="sched-row" style="${iDeclined||iCancelled?'opacity:0.5':''}">
       <div class="sched-time">${dateStr}<br><span style="font-size:9px">${timeStr}</span></div>
       <div class="sched-block sched-meeting">
-        <div class="sched-name">${escHtml(title)}</div>
+        <div class="sched-name">${escHtml(title)}${responseBadge}</div>
         <div class="sched-sub">${escHtml(loc)}</div>
         ${mtNote}
       </div>
@@ -2637,7 +2687,7 @@ async function loadMSCalendar() {
   try {
     const start = new Date().toISOString();
     const end = new Date(Date.now() + 7*24*60*60*1000).toISOString();
-    const data = await msGraphGet(`https://graph.microsoft.com/v1.0/me/calendarview?startDateTime=${start}&endDateTime=${end}&$top=20&$select=subject,start,end,location,organizer,isOnlineMeeting,onlineMeetingUrl&$orderby=start/dateTime`);
+    const data = await msGraphGet(`https://graph.microsoft.com/v1.0/me/calendarview?startDateTime=${start}&endDateTime=${end}&$top=20&$select=subject,start,end,location,organizer,isOnlineMeeting,onlineMeetingUrl,responseStatus,isCancelled&$orderby=start/dateTime`);
     const events = data.value || [];
 
     // ── 1. Update Schedule tab with minute taker annotations ──
