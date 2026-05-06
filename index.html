@@ -792,6 +792,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
                 <!-- Full project summary (collapsible) -->
                 <div id="proj-summary-section" style="display:none;margin-bottom:12px">
+                  <div style="font-size:11px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
+                    <span id="proj-last-review">Never reviewed</span>
+                    <button class="btn btn-sm" onclick="generateProjectSummary()" style="font-size:10px">↻ Refresh summary</button>
+                  </div>
                   <div class="ai-box" style="border-left-color:var(--success)">
                     <div class="ai-label" style="color:var(--success)">★ Full project summary</div>
                     <div class="ai-text thinking" id="proj-summary-text">Generating summary...</div>
@@ -1284,8 +1288,6 @@ async function callClaude(prompt, elId, showElId) {
   el.classList.add('thinking');
   el.textContent = 'Thinking...';
   try {
-    // AI proxy URL — update PROXY_URL below with your Cloudflare Worker URL
-    // after setting it up at workers.cloudflare.com
     const PROXY_URL = window.AI_PROXY_URL || '/.netlify/functions/claude';
     const res = await fetch(PROXY_URL, {
       method: 'POST',
@@ -1293,7 +1295,7 @@ async function callClaude(prompt, elId, showElId) {
       body: JSON.stringify({
         model: CLAUDE,
         max_tokens: 1500,
-        system: 'You are a sharp, efficient personal executive assistant. Be concise and action-oriented. Use short bullet points. Today is ' + now.toDateString() + '.',
+        system: `You are a personal executive assistant. Answer ONLY what is asked. Do NOT use templates, headers like "Token Budget", "PCM", "Mode:", or any preamble. Do NOT introduce yourself. Just answer directly and concisely with bullet points where appropriate. Today is ${now.toDateString()}.`,
         messages: [{ role: 'user', content: prompt }]
       })
     });
@@ -1639,25 +1641,24 @@ function renderProjectList() {
   }).join('');
 }
 
-// ── Click timer for single vs double click on project cards ──
-let _clickTimer = null;
-let _clickTarget = null;
+// ── Project click handler ─────────────────────────────────
+// Single click = select + quick overview
+// Double click = select + full summary
+let _lastClickTime = 0;
+let _lastClickName = '';
 
 function handleProjClick(name) {
-  if (_clickTimer && _clickTarget === name) {
-    // Second click within 300ms = double click → full summary
-    clearTimeout(_clickTimer);
-    _clickTimer = null;
-    _clickTarget = null;
+  const now2 = Date.now();
+  const isDouble = (now2 - _lastClickTime < 400) && (_lastClickName === name);
+  _lastClickTime = now2;
+  _lastClickName = name;
+
+  if (isDouble) {
+    // Double click — open with full summary
     openOutlookProj(name, true);
   } else {
-    // First click — wait to see if double
-    _clickTarget = name;
-    _clickTimer = setTimeout(() => {
-      _clickTimer = null;
-      _clickTarget = null;
-      openOutlookProj(name, false);
-    }, 300);
+    // Single click — select and show quick overview
+    openOutlookProj(name, false);
   }
 }
 
@@ -1743,6 +1744,15 @@ function openOutlookProj(name, autoSummary = false) {
 
   document.getElementById('proj-overview-section').style.display = 'block';
   document.getElementById('proj-summary-section').style.display = 'none';
+
+  // Show last review timestamp
+  const lastReview = getLastReviewStamp(name);
+  const reviewEl = document.getElementById('proj-last-review');
+  if (reviewEl) {
+    reviewEl.textContent = lastReview
+      ? `Last reviewed: ${new Date(lastReview).toLocaleString('en-ZA', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'})}`
+      : 'Not yet reviewed — double-click or tap ★ Full summary';
+  }
 
   // ── Analyse emails for flags ──
   const overdueEmails = p.emails.filter(e => isOverdue48h(e, p.emails));
@@ -1906,41 +1916,139 @@ function renderProjectEmails(p, overdueEmails, deadlineEmails) {
   }).join('');
 }
 
+// ── Project email review timestamps ──────────────────────
+// Stores { projectName: ISO timestamp } of last review
+let _projReviewStamps = {};
+
+function loadReviewStamps() {
+  try { _projReviewStamps = JSON.parse(sessionStorage.getItem('proj_review_stamps') || '{}'); } catch { _projReviewStamps = {}; }
+}
+function saveReviewStamps() {
+  sessionStorage.setItem('proj_review_stamps', JSON.stringify(_projReviewStamps));
+}
+function markProjectReviewed(name) {
+  _projReviewStamps[name] = new Date().toISOString();
+  saveReviewStamps();
+}
+function getLastReviewStamp(name) {
+  return _projReviewStamps[name] || null;
+}
+
 function generateProjectSummary() {
   const p = _projects[_currentProjName];
   if (!p) { toast('Select a project first'); return; }
 
   const summarySection = document.getElementById('proj-summary-section');
-  summarySection.style.display = 'block';
-  summarySection.scrollIntoView({behavior:'smooth', block:'start'});
+  if (summarySection) {
+    summarySection.style.display = 'block';
+    setTimeout(() => summarySection.scrollIntoView({behavior:'smooth', block:'start'}), 100);
+  }
 
-  const allEmails = p.emails.slice(0,20).map(e => {
-    const from = e.from?.emailAddress?.name||e.from?.emailAddress?.address||'?';
-    const date = new Date(e.receivedDateTime).toLocaleDateString('en-ZA',{day:'numeric',month:'short'});
+  // Timestamp logic — split emails into "already reviewed" and "new since last review"
+  const lastReview = getLastReviewStamp(_currentProjName);
+  const lastReviewDate = lastReview ? new Date(lastReview) : null;
+  const lastReviewStr = lastReviewDate
+    ? lastReviewDate.toLocaleString('en-ZA', {day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'})
+    : 'First review';
+
+  // New emails since last review
+  const newEmails = lastReviewDate
+    ? p.emails.filter(e => new Date(e.receivedDateTime) > lastReviewDate)
+    : p.emails;
+
+  // All emails for full context
+  const allEmailsText = p.emails.slice(0,25).map(e => {
+    const from = e.from?.emailAddress?.name || e.from?.emailAddress?.address || '?';
+    const dt = new Date(e.receivedDateTime).toLocaleString('en-ZA', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'});
     const isOv = isOverdue48h(e, p.emails);
     const isDl = hasDeadlineFlag(e);
-    return `[${date}] "${e.subject||'no subject'}" FROM:${from} STATUS:${e.isRead?'read':'UNREAD'}${isOv?' OVERDUE-48H':''}${isDl?' DEADLINE-FLAGGED':''}\nPreview: ${(e.bodyPreview||'').substring(0,150)}`;
+    const isNew = lastReviewDate ? new Date(e.receivedDateTime) > lastReviewDate : true;
+    return `[${dt}]${isNew?' [NEW]':' [PREV]'} "${e.subject||'no subject'}" FROM:${from} STATUS:${e.isRead?'read':'UNREAD'}${isOv?' ⚠OVERDUE-48H':''}${isDl?' 📅DEADLINE':''}
+Preview: ${(e.bodyPreview||'').substring(0,150)}`;
   }).join('\n\n');
+
+  const newEmailsText = newEmails.length > 0
+    ? newEmails.map(e => {
+        const from = e.from?.emailAddress?.name || e.from?.emailAddress?.address || '?';
+        const dt = new Date(e.receivedDateTime).toLocaleString('en-ZA', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'});
+        return `[${dt}] "${e.subject||'no subject'}" FROM:${from}\nPreview: ${(e.bodyPreview||'').substring(0,200)}`;
+      }).join('\n\n')
+    : 'No new emails since last review.';
 
   const tasksSummary = p.tasks.map(t => {
     const due = t.dueDateTime ? new Date(t.dueDateTime.dateTime) : null;
     const today = new Date(); today.setHours(0,0,0,0);
     const isOv = due && due < today;
-    return `- "${t.title}" | Due:${due?due.toLocaleDateString():'no date'} | Priority:${t.importance}${isOv?' [OVERDUE]':''}`;
+    return `- "${t.title}" | Due:${due?due.toLocaleDateString('en-ZA'):'no date'} | Priority:${t.importance}${isOv?' [OVERDUE]':''}`;
   }).join('\n');
 
-  // Pull in minutes linked to this project from session
   const linkedMinutes = (window._minutesLibrary||[]).filter(m => m.project === _currentProjName);
   const minutesSummary = linkedMinutes.length > 0
     ? linkedMinutes.map(m => `[${m.date}] ${m.title}:\n${m.summary}`).join('\n\n')
-    : 'No meeting minutes recorded for this project yet.';
+    : 'No meeting minutes recorded.';
 
   const overdueEmails = p.emails.filter(e => isOverdue48h(e, p.emails));
   const deadlineEmails = p.emails.filter(e => hasDeadlineFlag(e));
   const extPeople = Object.entries(p.people).filter(([a])=>!isInternalEmail(a)).map(([,n])=>n).join(', ');
 
+  // Mark as reviewed NOW before generating summary
+  markProjectReviewed(_currentProjName);
+
+  // Update the last review display
+  const reviewEl = document.getElementById('proj-last-review');
+  if (reviewEl) reviewEl.textContent = `Last reviewed: ${new Date().toLocaleString('en-ZA', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'})}`;
+
   callClaude(
-    `You are preparing a FULL PROJECT STATUS SUMMARY for: "${_currentProjName}"\n\nProject status: ${p.status}\nExternal people involved: ${extPeople||'none identified'}\n\n=== ALL EMAILS (${p.total} total, ${p.unread} unread) ===\n${allEmails||'No emails'}\n\n=== TASKS ===\n${tasksSummary||'No tasks linked'}\n\n=== MEETING MINUTES ===\n${minutesSummary}\n\n=== FLAGS ===\nEmails with no reply (48h+): ${overdueEmails.length > 0 ? overdueEmails.map(e=>'"'+e.subject+'"').join(', ') : 'None'}\nEmails with deadlines: ${deadlineEmails.length > 0 ? deadlineEmails.map(e=>'"'+e.subject+'"').join(', ') : 'None'}\n\nPrepare a COMPREHENSIVE PROJECT SUMMARY with these sections:\n\n1. EXECUTIVE OVERVIEW\n   What is this project? What is its purpose? (3-4 sentences from actual email content)\n\n2. CURRENT STATUS\n   Honest assessment with specific evidence from emails\n\n3. KEY PEOPLE & THEIR ROLES\n   Who is involved and what are they responsible for?\n\n4. COMPLETED / RESOLVED ITEMS\n   What has been done based on the email thread?\n\n5. PENDING ACTION ITEMS\n   Specific items that need action, with who owns them\n\n6. OVERDUE & FLAGGED ITEMS\n   Emails with no reply (48h+) and emails with deadlines — what action is needed?\n\n7. UPCOMING DEADLINES\n   Any dates, deadlines, or time-sensitive items found in the emails\n\n8. MEETING MINUTES SUMMARY\n   Key points from any recorded meeting minutes\n\n9. RECOMMENDED NEXT STEPS\n   Top 5 concrete actions to move this project forward\n\nBe specific. Use actual email subjects and names. This is the primary reference document for this project.`,
+    `PROJECT STATUS SUMMARY for: "${_currentProjName}"
+Status: ${p.status} | People: ${extPeople||'none identified'}
+Last reviewed: ${lastReviewStr} | New emails since then: ${newEmails.length}
+
+=== NEW EMAILS SINCE LAST REVIEW (${newEmails.length}) ===
+${newEmailsText}
+
+=== ALL EMAILS FOR FULL CONTEXT (${p.total} total, ${p.unread} unread) ===
+${allEmailsText||'No emails found for this project category.'}
+
+=== TASKS ===
+${tasksSummary||'No tasks linked'}
+
+=== MEETING MINUTES ===
+${minutesSummary}
+
+=== FLAGGED ===
+Overdue 48h+: ${overdueEmails.length > 0 ? overdueEmails.map(e=>'"'+e.subject+'"').join(', ') : 'None'}
+Deadlines: ${deadlineEmails.length > 0 ? deadlineEmails.map(e=>'"'+e.subject+'"').join(', ') : 'None'}
+
+Provide this EXACT structure with no preamble:
+
+EXECUTIVE OVERVIEW
+What this project is about based on actual email content.
+
+CURRENT STATUS
+One honest sentence backed by evidence.
+
+KEY PEOPLE & ROLES
+Who is doing what based on email exchanges.
+
+NEW SINCE LAST REVIEW
+Summary of emails marked [NEW] — what changed, what was discussed.
+
+PENDING ACTION ITEMS
+Specific items needing action with owner names.
+
+OVERDUE & FLAGGED
+48h unreplied emails and deadline items requiring immediate attention.
+
+UPCOMING DEADLINES
+Specific dates found in emails.
+
+MEETING MINUTES SUMMARY
+Key points from recorded meetings.
+
+NEXT STEPS
+Top 5 concrete actions to move forward.
+
+Use actual email subjects and people names. Be specific not generic.`,
     'proj-summary-text', null
   );
 }
@@ -3181,6 +3289,9 @@ window.addEventListener('load', () => {
   loadMTData();
   renderMTList();
   renderExcludedList();
+
+  // Load project review timestamps
+  loadReviewStamps();
 
   // Init dashboard metric click handlers
   initDashMetrics();
