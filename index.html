@@ -3621,3 +3621,24 @@ window.addEventListener('load', () => {
 </script>
 </body>
 </html>
+
+create table if not exists history (
+  id bigint generated always as identity primary key,
+  type text,
+  project text,
+  content text,
+  response text,
+  created_at timestamptz default now()
+);
+
+create table if not exists minutes (
+  id bigint generated always as identity primary key,
+  title text,
+  project text,
+  transcript text,
+  summary text,
+  created_at timestamptz default now()
+);
+
+create policy if not exists "public access" on history for all using (true) with check (true);
+create policy if not exists "public access" on minutes for all using (true) with check (true);
