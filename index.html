@@ -296,16 +296,25 @@ textarea.full { resize: vertical; min-height: 90px; line-height: 1.6; }
 .confirm-bar { font-size: 12px; color: var(--success); margin-top: 8px; display: none; }
 
 /* ── PROJECT CARDS ── */
+
+
+
+
+
 .proj-card {
   border-radius: var(--rl); border: 1px solid var(--border);
-  padding: 14px 16px; margin-bottom: 10px; cursor: pointer;
+  padding: 14px 16px; margin-bottom: 10px;
+  cursor: pointer !important; user-select: none;
   transition: all 0.15s; position: relative; overflow: hidden;
+  -webkit-tap-highlight-color: rgba(139,124,248,0.25);
 }
-.proj-card::before {
+.proj-card:hover { border-color: var(--border2); background: var(--surface2); transform: translateY(-1px); }
+.proj-card:active { transform: scale(0.97); opacity: 0.8; }
+
   content: ''; position: absolute; left: 0; top: 0; bottom: 0;
   width: 4px; background: var(--proj-color, var(--accent));
 }
-.proj-card:hover { border-color: var(--border2); background: var(--surface2); }
+
 .proj-card.active { border-color: var(--proj-color, var(--accent)); background: var(--surface2); }
 .proj-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
 .proj-card-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
@@ -1640,9 +1649,11 @@ function renderProjectList() {
 }
 
 // ── Project click handler ─────────────────────────────────
-// ONE click = select project + immediately generate full summary
 function handleProjClick(name) {
-  openOutlookProj(name, true); // always generate summary on click
+  console.log('Project clicked:', name, 'Projects loaded:', Object.keys(_projects).length);
+  if (!name) { toast('Error: no project name'); return; }
+  _currentProjName = name;
+  openOutlookProj(name, true);
 }
 
 function excludeCategory(name) {
@@ -1907,34 +1918,53 @@ function getLastReviewStamp(name) {
 }
 
 function generateProjectSummary() {
-  const p = _projects[_currentProjName];
-  if (!p) { toast('Select a project first'); return; }
-
-  const summarySection = document.getElementById('proj-summary-section');
-  if (summarySection) {
-    summarySection.style.display = 'block';
-    setTimeout(() => summarySection.scrollIntoView({behavior:'smooth', block:'start'}), 100);
+  // Use _currentProjName set by openOutlookProj
+  const name = _currentProjName;
+  if (!name) {
+    toast('Click a project from the list first');
+    return;
   }
 
-  // Timestamp logic — split emails into "already reviewed" and "new since last review"
-  const lastReview = getLastReviewStamp(_currentProjName);
+  const p = _projects[name];
+
+  // Show summary section immediately with loading state
+  const summarySection = document.getElementById('proj-summary-section');
+  const summaryText = document.getElementById('proj-summary-text');
+  if (summarySection) summarySection.style.display = 'block';
+  if (summaryText) {
+    summaryText.className = 'ai-text thinking';
+    summaryText.textContent = `Generating summary for "${name}"...`;
+  }
+  setTimeout(() => {
+    if (summarySection) summarySection.scrollIntoView({behavior:'smooth', block:'start'});
+  }, 150);
+
+  // If no project data loaded yet (not synced)
+  if (!p) {
+    if (summaryText) {
+      summaryText.className = 'ai-text';
+      summaryText.textContent = `⚠ No email data loaded for "${name}" yet.\n\nTo load emails:\n1. Go to Connections tab\n2. Click "↻ Refresh all"\n3. Then go to Projects tab → ↻ Sync Outlook\n4. Click this project again`;
+    }
+    return;
+  }
+
+  // Timestamp logic
+  const lastReview = getLastReviewStamp(name);
   const lastReviewDate = lastReview ? new Date(lastReview) : null;
   const lastReviewStr = lastReviewDate
     ? lastReviewDate.toLocaleString('en-ZA', {day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'})
     : 'First review';
 
-  // New emails since last review
   const newEmails = lastReviewDate
     ? p.emails.filter(e => new Date(e.receivedDateTime) > lastReviewDate)
     : p.emails;
 
-  // All emails for full context
   const allEmailsText = p.emails.slice(0,25).map(e => {
     const from = e.from?.emailAddress?.name || e.from?.emailAddress?.address || '?';
     const dt = new Date(e.receivedDateTime).toLocaleString('en-ZA', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'});
+    const isNew = lastReviewDate ? new Date(e.receivedDateTime) > lastReviewDate : true;
     const isOv = isOverdue48h(e, p.emails);
     const isDl = hasDeadlineFlag(e);
-    const isNew = lastReviewDate ? new Date(e.receivedDateTime) > lastReviewDate : true;
     return `[${dt}]${isNew?' [NEW]':' [PREV]'} "${e.subject||'no subject'}" FROM:${from} STATUS:${e.isRead?'read':'UNREAD'}${isOv?' ⚠OVERDUE-48H':''}${isDl?' 📅DEADLINE':''}
 Preview: ${(e.bodyPreview||'').substring(0,150)}`;
   }).join('\n\n');
@@ -1947,39 +1977,37 @@ Preview: ${(e.bodyPreview||'').substring(0,150)}`;
       }).join('\n\n')
     : 'No new emails since last review.';
 
-  const tasksSummary = p.tasks.map(t => {
+  const tasksSummary = (p.tasks||[]).map(t => {
     const due = t.dueDateTime ? new Date(t.dueDateTime.dateTime) : null;
     const today = new Date(); today.setHours(0,0,0,0);
     const isOv = due && due < today;
     return `- "${t.title}" | Due:${due?due.toLocaleDateString('en-ZA'):'no date'} | Priority:${t.importance}${isOv?' [OVERDUE]':''}`;
   }).join('\n');
 
-  const linkedMinutes = (window._minutesLibrary||[]).filter(m => m.project === _currentProjName);
+  const linkedMinutes = (window._minutesLibrary||[]).filter(m => m.project === name);
   const minutesSummary = linkedMinutes.length > 0
     ? linkedMinutes.map(m => `[${m.date}] ${m.title}:\n${m.summary}`).join('\n\n')
     : 'No meeting minutes recorded.';
 
-  const overdueEmails = p.emails.filter(e => isOverdue48h(e, p.emails));
-  const deadlineEmails = p.emails.filter(e => hasDeadlineFlag(e));
-  const extPeople = Object.entries(p.people).filter(([a])=>!isInternalEmail(a)).map(([,n])=>n).join(', ');
+  const overdueEmails = (p.emails||[]).filter(e => isOverdue48h(e, p.emails));
+  const deadlineEmails = (p.emails||[]).filter(e => hasDeadlineFlag(e));
+  const extPeople = Object.entries(p.people||{}).filter(([a])=>!isInternalEmail(a)).map(([,n])=>n).join(', ');
 
-  // Mark as reviewed NOW before generating summary
-  markProjectReviewed(_currentProjName);
-
-  // Update the last review display
+  // Mark as reviewed
+  markProjectReviewed(name);
   const reviewEl = document.getElementById('proj-last-review');
   if (reviewEl) reviewEl.textContent = `Last reviewed: ${new Date().toLocaleString('en-ZA', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'})}`;
 
   callClaude(
-    `PROJECT STATUS SUMMARY for: "${_currentProjName}"
+    `PROJECT STATUS SUMMARY for: "${name}"
 Status: ${p.status} | People: ${extPeople||'none identified'}
 Last reviewed: ${lastReviewStr} | New emails since then: ${newEmails.length}
 
 === NEW EMAILS SINCE LAST REVIEW (${newEmails.length}) ===
 ${newEmailsText}
 
-=== ALL EMAILS FOR FULL CONTEXT (${p.total} total, ${p.unread} unread) ===
-${allEmailsText||'No emails found for this project category.'}
+=== ALL EMAILS (${p.total} total, ${p.unread} unread) ===
+${allEmailsText||'No emails found for this project.'}
 
 === TASKS ===
 ${tasksSummary||'No tasks linked'}
@@ -1987,29 +2015,29 @@ ${tasksSummary||'No tasks linked'}
 === MEETING MINUTES ===
 ${minutesSummary}
 
-=== FLAGGED ===
+=== FLAGS ===
 Overdue 48h+: ${overdueEmails.length > 0 ? overdueEmails.map(e=>'"'+e.subject+'"').join(', ') : 'None'}
 Deadlines: ${deadlineEmails.length > 0 ? deadlineEmails.map(e=>'"'+e.subject+'"').join(', ') : 'None'}
 
-Provide this EXACT structure with no preamble:
+Provide this EXACT structure, no preamble:
 
 EXECUTIVE OVERVIEW
 What this project is about based on actual email content.
 
 CURRENT STATUS
-One honest sentence backed by evidence.
+One honest sentence backed by evidence from emails.
 
 KEY PEOPLE & ROLES
 Who is doing what based on email exchanges.
 
 NEW SINCE LAST REVIEW
-Summary of emails marked [NEW] — what changed, what was discussed.
+Summary of [NEW] emails — what changed, what was discussed.
 
 PENDING ACTION ITEMS
-Specific items needing action with owner names.
+Specific items needing action with owner names from emails.
 
 OVERDUE & FLAGGED
-48h unreplied emails and deadline items requiring immediate attention.
+48h unreplied emails and deadline items needing immediate attention.
 
 UPCOMING DEADLINES
 Specific dates found in emails.
@@ -2018,9 +2046,9 @@ MEETING MINUTES SUMMARY
 Key points from recorded meetings.
 
 NEXT STEPS
-Top 5 concrete actions to move forward.
+Top 5 concrete actions to move this project forward.
 
-Use actual email subjects and people names. Be specific not generic.`,
+Be specific. Use actual email subjects and people names. No generic advice.`,
     'proj-summary-text', null
   );
 }
