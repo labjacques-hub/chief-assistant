@@ -2620,6 +2620,7 @@ async function loadMSEmails() {
           const date = new Date(m.receivedDateTime).toLocaleDateString('en-ZA',{day:'numeric',month:'short'});
           const isOv48 = isOverdue48h(m, emails);
           const isDl = hasDeadlineFlag(m);
+          const isUnread = !m.isRead;
           return `<div class="tracker-row">
             <span class="dot ${isOv48 ? 'dot-red' : isUnread ? 'dot-amber' : 'dot-green'}"></span>
             <div class="tracker-info">
