@@ -642,6 +642,10 @@ window.addEventListener('DOMContentLoaded', () => {
         Email tracker <span class="snav-badge red">2</span>
       </div>
       <div class="snav-section">Settings</div>
+      <div class="snav-item" onclick="showTab('history',this,'s')">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 1.5a5.5 5.5 0 110 11 5.5 5.5 0 010-11zM7.5 4v4.25l3 1.75-.5.87-3.5-2V4h1z"/></svg>
+        History
+      </div>
       <div class="snav-item" onclick="showTab('connections',this,'s')">
         <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a2 2 0 012 2v1h2a1 1 0 011 1v8a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1h2V3a2 2 0 012-2zm0 1.5a.5.5 0 00-.5.5v1h1V3a.5.5 0 00-.5-.5zM8 8a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"/></svg>
         Connections <span class="snav-badge" id="conn-badge-s" style="background:var(--warning);display:none">!</span>
@@ -1003,6 +1007,32 @@ window.addEventListener('DOMContentLoaded', () => {
         </div>
       </div>
 
+      <!-- ── HISTORY ── -->
+      <div id="tab-history" class="tab-panel">
+        <div class="card">
+          <div class="card-title">
+            Activity history
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-sm" onclick="renderHistory('all')" id="hf-all" style="background:var(--accent);color:#fff;border-color:var(--accent)">All</button>
+              <button class="btn btn-sm" onclick="renderHistory('summary')" id="hf-summary">Summaries</button>
+              <button class="btn btn-sm" onclick="renderHistory('briefing')" id="hf-briefing">Briefings</button>
+              <button class="btn btn-sm" onclick="renderHistory('question')" id="hf-question">Questions</button>
+              <button class="btn btn-sm" onclick="renderHistory('minutes')" id="hf-minutes">Minutes</button>
+              <button class="btn btn-sm btn-danger" onclick="clearHistory()" style="margin-left:auto">Clear all</button>
+            </div>
+          </div>
+          <div id="history-filter-proj" style="margin-bottom:10px;display:flex;gap:8px;align-items:center">
+            <label style="font-size:12px;color:var(--muted)">Filter by project:</label>
+            <select class="full" id="history-proj-filter" onchange="renderHistory()" style="max-width:200px;font-size:12px">
+              <option value="">All projects</option>
+            </select>
+          </div>
+          <div id="history-list">
+            <div style="color:var(--muted);font-size:13px;font-style:italic">No history yet. Use the AI features and they will be recorded here.</div>
+          </div>
+        </div>
+      </div>
+
       <!-- ── CONNECTIONS ── -->
       <div id="tab-connections" class="tab-panel">
 
@@ -1205,10 +1235,11 @@ window.addEventListener('DOMContentLoaded', () => {
 const CLAUDE = "claude-sonnet-4-5";
 
 // ── AI PROXY URL ──────────────────────────────────────────
-// After setting up your Cloudflare Worker, paste its URL here:
-// e.g. window.AI_PROXY_URL = 'https://chief-ai.yourname.workers.dev';
-// Leave blank to use Netlify Functions (/.netlify/functions/claude)
 window.AI_PROXY_URL = '';
+
+// ── SUPABASE CONFIG ───────────────────────────────────────
+const SUPABASE_URL = 'https://fjbkwkfpjrymtyzqnnhb.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_QpkrH6FAd6X9hYDKFCEhmA_TM80yNIS';
 let currentProj = "";
 let openMinuteTitle = "";
 let recState = "idle";
@@ -1228,6 +1259,7 @@ const titles = {
   recorder: ['Live recorder', 'Record, transcribe & note'],
   minutes: ['Minutes library', 'All processed meetings'],
   tracker: ['Email tracker', 'Watch senders & replies'],
+  history: ['History', 'All past summaries, briefings & questions'],
   connections: ['Connections', 'Connect your apps & accounts'],
   settings: ['Settings', 'Manage projects, categories & domains']
 };
@@ -1256,7 +1288,7 @@ function showTab(name, el, src) {
       if (idx >= 0) document.querySelectorAll('.bottom-nav .nav-item')[idx]?.classList.add('active');
     } else {
       const sItems = document.querySelectorAll('.snav-item');
-      const map = {dashboard:0,projects:1,schedule:2,recorder:3,minutes:4,tracker:5,connections:6,settings:7};
+      const map = {dashboard:0,projects:1,schedule:2,recorder:3,minutes:4,tracker:5,history:6,connections:7,settings:8};
       if (map[name] !== undefined) sItems[map[name]]?.classList.add('active');
     }
   }
@@ -1275,6 +1307,7 @@ function showTab(name, el, src) {
   // Render settings list on open
   if (name === 'settings') { renderSettingsCategoryList(); renderDomainList(); }
   if (name === 'dashboard') { initDashMetrics(); }
+  if (name === 'history') { renderHistory(); }
 }
 
 // ── Toast ──
@@ -1285,7 +1318,219 @@ function toast(msg, dur=3000) {
 }
 
 // ── Claude API ──
-async function callClaude(prompt, elId, showElId) {
+// ── SUPABASE PERSISTENCE ──────────────────────────────────
+// All data stored in Supabase — works across all devices
+
+async function sbGet(table, key) {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?key=eq.${encodeURIComponent(key)}&select=value`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    });
+    const data = await r.json();
+    return data?.[0]?.value ?? null;
+  } catch { return null; }
+}
+
+async function sbSet(table, key, value) {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({ key, value, updated_at: new Date().toISOString() })
+    });
+  } catch(e) { console.warn('sbSet failed:', e); }
+}
+
+async function sbInsert(table, row) {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(row)
+    });
+    return r.ok;
+  } catch { return false; }
+}
+
+async function sbQuery(table, filters = '', order = 'created_at.desc', limit = 100) {
+  try {
+    const q = filters ? `&${filters}` : '';
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?order=${order}&limit=${limit}${q}`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    });
+    return await r.json();
+  } catch { return []; }
+}
+
+// ── Persistent settings save/load ─────────────────────────
+async function saveSettings(key, value) {
+  // Save to both localStorage (instant) and Supabase (persistent cross-device)
+  try { localStorage.setItem('sb_' + key, JSON.stringify(value)); } catch {}
+  await sbSet('settings', key, value);
+}
+
+async function loadSettings(key, fallback = null) {
+  // Try localStorage first (fast), then Supabase (authoritative)
+  try {
+    const local = localStorage.getItem('sb_' + key);
+    if (local !== null) {
+      // Refresh from Supabase in background
+      sbGet('settings', key).then(v => {
+        if (v !== null) {
+          try { localStorage.setItem('sb_' + key, JSON.stringify(v)); } catch {}
+        }
+      });
+      return JSON.parse(local);
+    }
+  } catch {}
+  // Fetch from Supabase
+  const val = await sbGet('settings', key);
+  if (val !== null) {
+    try { localStorage.setItem('sb_' + key, JSON.stringify(val)); } catch {}
+    return val;
+  }
+  return fallback;
+}
+
+// ── History (summaries, briefings, questions, minutes) ────
+async function saveToHistory(type, project, prompt, response) {
+  // Local cache
+  try {
+    const h = JSON.parse(localStorage.getItem('chief_history') || '[]');
+    h.unshift({ id: Date.now(), type, project: project||'', prompt: prompt.substring(0,500), response, timestamp: new Date().toISOString() });
+    if (h.length > 200) h.splice(200);
+    localStorage.setItem('chief_history', JSON.stringify(h));
+  } catch {}
+  // Supabase
+  await sbInsert('history', {
+    type,
+    project: project || '',
+    content: prompt.substring(0, 1000),
+    response,
+    created_at: new Date().toISOString()
+  });
+}
+
+async function getHistory(type, project, limit = 50) {
+  try {
+    // Try local cache first
+    const local = JSON.parse(localStorage.getItem('chief_history') || '[]');
+    if (local.length > 0) {
+      return local
+        .filter(h => (!type || h.type === type) && (!project || h.project === project))
+        .slice(0, limit);
+    }
+  } catch {}
+  // Fetch from Supabase
+  let filters = [];
+  if (type) filters.push(`type=eq.${encodeURIComponent(type)}`);
+  if (project) filters.push(`project=eq.${encodeURIComponent(project)}`);
+  const rows = await sbQuery('history', filters.join('&'), 'created_at.desc', limit);
+  return rows.map(r => ({
+    id: r.id,
+    type: r.type,
+    project: r.project,
+    prompt: r.content,
+    response: r.response,
+    timestamp: r.created_at
+  }));
+}
+
+// ── Review stamps ─────────────────────────────────────────
+let _projReviewStamps = {};
+
+async function loadReviewStamps() {
+  const stamps = await loadSettings('proj_review_stamps', {});
+  _projReviewStamps = stamps || {};
+}
+async function saveReviewStamps() {
+  await saveSettings('proj_review_stamps', _projReviewStamps);
+}
+function markProjectReviewed(name) {
+  _projReviewStamps[name] = new Date().toISOString();
+  saveReviewStamps();
+}
+function getLastReviewStamp(name) {
+  return _projReviewStamps[name] || null;
+}
+
+// ── Minutes library ───────────────────────────────────────
+async function saveMinutesToDB(title, project, transcript, summary) {
+  // Local
+  if (!window._minutesLibrary) window._minutesLibrary = [];
+  window._minutesLibrary.unshift({ title, project, transcript, summary, date: new Date().toLocaleString('en-ZA') });
+  try { localStorage.setItem('minutes_library', JSON.stringify(window._minutesLibrary)); } catch {}
+  // Supabase
+  await sbInsert('minutes', { title, project, transcript, summary, created_at: new Date().toISOString() });
+}
+
+async function loadMinutesFromDB() {
+  try {
+    const local = JSON.parse(localStorage.getItem('minutes_library') || '[]');
+    if (local.length > 0) { window._minutesLibrary = local; return; }
+  } catch {}
+  const rows = await sbQuery('minutes', '', 'created_at.desc', 100);
+  window._minutesLibrary = rows.map(r => ({
+    title: r.title, project: r.project,
+    transcript: r.transcript, summary: r.summary,
+    date: new Date(r.created_at).toLocaleString('en-ZA')
+  }));
+  try { localStorage.setItem('minutes_library', JSON.stringify(window._minutesLibrary)); } catch {}
+}
+
+// ── All settings save/load functions ─────────────────────
+function saveManualStatus() {
+  saveSettings('proj_manual_status', _manualStatus);
+  saveSettings('proj_excluded', [..._excludedCategories]);
+}
+async function loadManualStatus() {
+  _manualStatus = await loadSettings('proj_manual_status', {});
+  const excl = await loadSettings('proj_excluded', []);
+  _excludedCategories = new Set(excl || []);
+}
+
+function saveDomains() { saveSettings('my_domains', _myDomains); }
+async function loadDomains() { _myDomains = await loadSettings('my_domains', ['finex','finexmoney','imaliexpress']); }
+
+function saveManualProjects() { saveSettings('manual_projects', _manualProjects); }
+async function loadManualProjects() { _manualProjects = await loadSettings('manual_projects', []); }
+
+function saveMTData() {
+  saveSettings('minute_takers', _minuteTakers);
+  saveSettings('mt_exclusions', _mtExclusions);
+}
+async function loadMTData() {
+  _minuteTakers = await loadSettings('minute_takers', []);
+  _mtExclusions = await loadSettings('mt_exclusions', {});
+}
+
+// MS credentials — keep in localStorage only (security)
+function saveMSCreds(clientId, tenantId) {
+  localStorage.setItem('ms_client_id', clientId);
+  localStorage.setItem('ms_tenant_id', tenantId);
+}
+function loadMSCreds() {
+  return {
+    clientId: localStorage.getItem('ms_client_id') || '',
+    tenantId: localStorage.getItem('ms_tenant_id') || 'common'
+  };
+}
+function clearMSCreds() {
+  localStorage.removeItem('ms_client_id');
+  localStorage.removeItem('ms_tenant_id');
+}
+
+async function callClaude(prompt, elId, showElId, historyType, historyProject) {
   const el = document.getElementById(elId);
   if (!el) { console.warn('callClaude: element not found:', elId); return; }
   if (showElId) {
@@ -1312,9 +1557,12 @@ async function callClaude(prompt, elId, showElId) {
     }
     const data = await res.json();
     if (data.error) throw new Error(data.error);
+    const responseText = data.content?.[0]?.text || 'No response received.';
     el.classList.remove('thinking');
     el.style.whiteSpace = 'pre-wrap';
-    el.textContent = data.content?.[0]?.text || 'No response received.';
+    el.textContent = responseText;
+    // Save to persistent history
+    if (historyType) saveToHistory(historyType, historyProject || '', prompt, responseText);
   } catch(e) {
     el.classList.remove('thinking');
     el.textContent = '⚠ ' + (e.message || 'Could not reach AI.');
@@ -1336,7 +1584,7 @@ function getAIBriefing() {
   const emailCtx = window._emailContext ? `Recent emails:\n${window._emailContext}` : '';
   callClaude(
     `Executive morning briefing based on real data.\n${taskCtx}\n${calCtx}\n${emailCtx}\n\nGive 5 punchy bullet points: top priority, scheduling tip, biggest risk, one to delegate, one quick win. Be specific — reference actual tasks and emails.`,
-    'briefing-text', 'briefing-box'
+    'briefing-text', 'briefing-box', 'briefing', 'dashboard'
   );
 }
 
@@ -1349,7 +1597,7 @@ function askDash() {
   const context = taskCtx || emailCtx || calCtx
     ? `Context:${taskCtx}${emailCtx}${calCtx}`
     : 'No Microsoft 365 data loaded yet.';
-  callClaude(`${context}\n\nQuestion: ${q}`, 'dash-reply', null);
+  callClaude(`${context}\n\nQuestion: ${q}`, 'dash-reply', null, 'question', 'dashboard');
   document.getElementById('dash-input').value = '';
 }
 
@@ -1359,10 +1607,10 @@ let _currentProjName = '';
 let _manualStatus = {}; // stores user overrides: { catName: 'active'|'quiet' }
 let _excludedCategories = new Set(); // person-name categories excluded by user
 // Persist overrides in sessionStorage
-function saveManualStatus() { sessionStorage.setItem('proj_manual_status', JSON.stringify(_manualStatus)); sessionStorage.setItem('proj_excluded', JSON.stringify([..._excludedCategories])); }
+function saveManualStatus() { localStorage.setItem('proj_manual_status', JSON.stringify(_manualStatus)); localStorage.setItem('proj_excluded', JSON.stringify([..._excludedCategories])); }
 function loadManualStatus() {
-  try { _manualStatus = JSON.parse(sessionStorage.getItem('proj_manual_status')||'{}'); } catch { _manualStatus = {}; }
-  try { _excludedCategories = new Set(JSON.parse(sessionStorage.getItem('proj_excluded')||'[]')); } catch { _excludedCategories = new Set(); }
+  try { _manualStatus = JSON.parse(localStorage.getItem('proj_manual_status')||'{}'); } catch { _manualStatus = {}; }
+  try { _excludedCategories = new Set(JSON.parse(localStorage.getItem('proj_excluded')||'[]')); } catch { _excludedCategories = new Set(); }
 }
 
 const OUTLOOK_COLOURS = {
@@ -1683,7 +1931,75 @@ function toggleProjectStatus(name) {
   toast(`"${name}" marked as ${next}`);
 }
 
-// ── Email analysis helpers ────────────────────────────────
+// ── History rendering ─────────────────────────────────────
+let _historyTypeFilter = 'all';
+
+function renderHistory(type) {
+  if (type) {
+    _historyTypeFilter = type;
+    document.querySelectorAll('[id^="hf-"]').forEach(b => {
+      b.style.background = '';
+      b.style.color = '';
+      b.style.borderColor = '';
+    });
+    const activeBtn = document.getElementById('hf-' + type);
+    if (activeBtn) {
+      activeBtn.style.background = 'var(--accent)';
+      activeBtn.style.color = '#fff';
+      activeBtn.style.borderColor = 'var(--accent)';
+    }
+  }
+
+  const projFilter = document.getElementById('history-proj-filter')?.value || '';
+  const history = getHistory(
+    _historyTypeFilter === 'all' ? null : _historyTypeFilter,
+    projFilter || null,
+    100
+  );
+
+  // Update project filter options
+  const allHistory = getHistory(null, null, 500);
+  const projects = [...new Set(allHistory.map(h => h.project).filter(Boolean))];
+  const projSel = document.getElementById('history-proj-filter');
+  if (projSel) {
+    const cur = projSel.value;
+    projSel.innerHTML = '<option value="">All projects</option>' +
+      projects.map(p => `<option value="${escHtml(p)}"${p===cur?' selected':''}>${escHtml(p)}</option>`).join('');
+  }
+
+  const el = document.getElementById('history-list');
+  if (!el) return;
+
+  if (history.length === 0) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:13px;font-style:italic;padding:12px 0">No history found for this filter.</div>';
+    return;
+  }
+
+  const typeLabels = {summary:'📋 Summary', briefing:'★ Briefing', question:'💬 Question', minutes:'🎙 Minutes'};
+  const typePills = {summary:'pill-purple', briefing:'pill-amber', question:'pill-green', minutes:'pill-blue'};
+
+  el.innerHTML = history.map(h => {
+    const dt = new Date(h.timestamp).toLocaleString('en-ZA', {
+      day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'
+    });
+    const label = typeLabels[h.type] || h.type;
+    return `<div style="padding:12px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+        <span class="pill pill-purple" style="font-size:10px">${label}</span>
+        ${h.project ? `<span class="pill pill-gray" style="font-size:10px">${escHtml(h.project)}</span>` : ''}
+        <span style="font-size:10px;color:var(--muted);margin-left:auto;font-family:var(--mono)">${dt}</span>
+      </div>
+      <div style="font-size:13px;line-height:1.7;white-space:pre-wrap;color:var(--text);max-height:200px;overflow-y:auto;background:var(--surface2);border-radius:var(--r);padding:10px">${escHtml(h.response)}</div>
+    </div>`;
+  }).join('');
+}
+
+function clearHistory() {
+  if (!confirm('Clear all history? This cannot be undone.')) return;
+  localStorage.removeItem('chief_history');
+  renderHistory();
+  toast('History cleared');
+}
 const DEADLINE_PATTERNS = [
   /\b(by|before|due|deadline|no later than|must be|submit by|complete by)\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{1,2}[\/-]\d{1,2}|\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))/i,
   /\b(end of|eod|eow|end of week|end of month|this (week|month|friday|monday))\b/i,
@@ -1904,10 +2220,10 @@ function renderProjectEmails(p, overdueEmails, deadlineEmails) {
 let _projReviewStamps = {};
 
 function loadReviewStamps() {
-  try { _projReviewStamps = JSON.parse(sessionStorage.getItem('proj_review_stamps') || '{}'); } catch { _projReviewStamps = {}; }
+  try { _projReviewStamps = JSON.parse(localStorage.getItem('proj_review_stamps') || '{}'); } catch { _projReviewStamps = {}; }
 }
 function saveReviewStamps() {
-  sessionStorage.setItem('proj_review_stamps', JSON.stringify(_projReviewStamps));
+  localStorage.setItem('proj_review_stamps', JSON.stringify(_projReviewStamps));
 }
 function markProjectReviewed(name) {
   _projReviewStamps[name] = new Date().toISOString();
@@ -2049,7 +2365,7 @@ NEXT STEPS
 Top 5 concrete actions to move this project forward.
 
 Be specific. Use actual email subjects and people names. No generic advice.`,
-    'proj-summary-text', null
+    'proj-summary-text', null, 'summary', name
   );
 }
 
@@ -2102,7 +2418,7 @@ function askProj() {
   const p = _projects[_currentProjName];
   const emailCtx = p ? p.emails.slice(0,8).map(e=>`"${e.subject}" from ${e.from?.emailAddress?.name||'?'} on ${new Date(e.receivedDateTime).toLocaleDateString()}`).join('\n') : '';
   const ctx = p ? `Project: "${_currentProjName}". Status: ${p.status}. ${p.total} emails.\nRecent emails:\n${emailCtx}` : '';
-  callClaude(`${ctx}\n\nSpecific question: ${q}\n\nAnswer directly and concisely.`, 'proj-detail-text', null);
+  callClaude(`${ctx}\n\nSpecific question: ${q}\n\nAnswer directly and concisely.`, 'proj-detail-text', null, 'question', _currentProjName);
   document.getElementById('proj-input').value = '';
 }
 
@@ -2144,12 +2460,12 @@ let _mtExclusions = {};       // { meetingTitle: true }
 let _calendarMeetings = [];   // current week's meetings
 
 function loadMTData() {
-  try { _minuteTakers = JSON.parse(sessionStorage.getItem('minute_takers') || '[]'); } catch { _minuteTakers = []; }
-  try { _mtExclusions = JSON.parse(sessionStorage.getItem('mt_exclusions') || '{}'); } catch { _mtExclusions = {}; }
+  try { _minuteTakers = JSON.parse(localStorage.getItem('minute_takers') || '[]'); } catch { _minuteTakers = []; }
+  try { _mtExclusions = JSON.parse(localStorage.getItem('mt_exclusions') || '{}'); } catch { _mtExclusions = {}; }
 }
 function saveMTData() {
-  sessionStorage.setItem('minute_takers', JSON.stringify(_minuteTakers));
-  sessionStorage.setItem('mt_exclusions', JSON.stringify(_mtExclusions));
+  localStorage.setItem('minute_takers', JSON.stringify(_minuteTakers));
+  localStorage.setItem('mt_exclusions', JSON.stringify(_mtExclusions));
 }
 
 function renderMTList() {
@@ -2327,7 +2643,7 @@ function refreshMinutesLibraryUI() {
 function optimiseDay() {
   const calCtx = window._calContext || 'No calendar loaded — connect Microsoft 365 first.';
   const taskCtx = window._taskContext || 'No tasks loaded.';
-  callClaude(`Calendar: ${calCtx}\nTasks:\n${taskCtx}\n\nGive 5 direct scheduling recommendations: priority order, what to batch, what to defer, how to protect focus time.`, "sched-text", null);
+  callClaude(`Calendar: ${calCtx}\nTasks:\n${taskCtx}\n\nGive 5 direct scheduling recommendations: priority order, what to batch, what to defer, how to protect focus time.`, "sched-text", null, "briefing", "schedule");
 }
 function askSched() {
   const q = document.getElementById('sched-input').value.trim();
@@ -2441,7 +2757,7 @@ function processRecording() {
   if (!transcript || transcript.includes('Listening') || transcript.includes('Transcript appears')) {
     toast('No transcript yet — record first or type notes manually'); return;
   }
-  callClaude(`Process meeting minutes. Meeting: "${title}". Project: ${project}.\nTranscript:\n${transcript}\nLive notes:\n${liveNotes}\n\nExtract:\n1. KEY DECISIONS\n2. ACTION ITEMS (owner + due date)\n3. OPEN QUESTIONS\n4. One-line project status update\n\nBe concise.`, "rec-result-text", "rec-result-card");
+  callClaude(`Process meeting minutes. Meeting: "${title}". Project: ${project}.\nTranscript:\n${transcript}\nLive notes:\n${liveNotes}\n\nExtract:\n1. KEY DECISIONS\n2. ACTION ITEMS (owner + due date)\n3. OPEN QUESTIONS\n4. One-line project status update\n\nBe concise.`, "rec-result-text", "rec-result-card", "minutes", project);
 }
 function saveToLibrary() {
   const title = document.getElementById('rec-title').value || 'New recording';
@@ -2451,16 +2767,7 @@ function saveToLibrary() {
   document.getElementById('new-minute-meta').textContent = project + ' · Just recorded';
   document.getElementById('new-minute-entry').style.display = 'flex';
 
-  // Store in minutes library for project summary inclusion
-  if (!window._minutesLibrary) window._minutesLibrary = [];
-  window._minutesLibrary.push({
-    title,
-    project,
-    date: new Date().toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'}),
-    summary: summaryText || fullTranscript.substring(0,500) || 'No transcript available'
-  });
-  // Persist across tabs
-  try { sessionStorage.setItem('minutes_library', JSON.stringify(window._minutesLibrary)); } catch {}
+  await saveMinutesToDB(title, project, fullTranscript || '', summaryText);
   refreshMinutesLibraryUI();
   toast('Saved to minutes library ✓');
 }
@@ -2507,7 +2814,7 @@ function askTracker() {
   const q = document.getElementById('tracker-input').value.trim();
   if (!q) return;
   const ctx = window._emailContext || 'No emails loaded yet — connect Microsoft 365 first.';
-  callClaude(`Email context:\n${ctx}\n\nQuery: ${q}\n\nRespond concisely as an executive assistant.`, "tracker-reply", null);
+  callClaude(`Email context:\n${ctx}\n\nQuery: ${q}\n\nRespond concisely as an executive assistant.`, "tracker-reply", null, "question", "email-tracker");
   document.getElementById('tracker-input').value = '';
 }// ── Microsoft 365 / MSAL ──────────────────────────────
 let msalInstance = null;
@@ -2596,8 +2903,8 @@ async function msSignIn() {
     const me = await msGraphGet('https://graph.microsoft.com/v1.0/me');
 
     // Persist config
-    sessionStorage.setItem('ms_client_id', clientId.trim());
-    sessionStorage.setItem('ms_tenant_id', tenantId);
+    saveMSCreds(clientId.trim(), tenantId);
+
 
     onMSConnected(me);
     // Auto-load all data immediately after connecting
@@ -2641,8 +2948,8 @@ function onMSConnected(me) {
 
 async function msSignOut() {
   msAccessToken = null; msalInstance = null;
-  sessionStorage.removeItem('ms_client_id');
-  sessionStorage.removeItem('ms_tenant_id');
+  clearMSCreds();
+  localStorage.removeItem('ms_tenant_id');
   document.getElementById('conn-ms-connected').style.display = 'none';
   document.getElementById('conn-setup-card').style.display = 'block';
   document.getElementById('conn-data-card').style.display = 'none';
@@ -2937,9 +3244,9 @@ async function loadMSTasks() {
 // Emails from these domains are "internal" and won't appear in people lists
 let _myDomains = ['finex','finexmoney','imaliexpress'];
 
-function saveDomains() { sessionStorage.setItem('my_domains', JSON.stringify(_myDomains)); }
+function saveDomains() { localStorage.setItem('my_domains', JSON.stringify(_myDomains)); }
 function loadDomains() {
-  try { const d = JSON.parse(sessionStorage.getItem('my_domains')); if(d) _myDomains = d; } catch {}
+  try { const d = JSON.parse(localStorage.getItem('my_domains')); if(d) _myDomains = d; } catch {}
 }
 function isInternalEmail(addr) {
   if (!addr) return true;
@@ -3091,9 +3398,9 @@ function setProjectStatus(name, newStatus) {
 // ── MANUAL PROJECT CREATION ───────────────────────────────
 let _manualProjects = [];
 function loadManualProjects() {
-  try { _manualProjects = JSON.parse(sessionStorage.getItem('manual_projects')||'[]'); } catch { _manualProjects = []; }
+  try { _manualProjects = JSON.parse(localStorage.getItem('manual_projects')||'[]'); } catch { _manualProjects = []; }
 }
-function saveManualProjects() { sessionStorage.setItem('manual_projects', JSON.stringify(_manualProjects)); }
+function saveManualProjects() { localStorage.setItem('manual_projects', JSON.stringify(_manualProjects)); }
 
 function createManualProject() {
   const name = document.getElementById('new-proj-name').value.trim();
@@ -3241,51 +3548,50 @@ function toggleTheme() {
   document.body.classList.toggle('light', _isLightTheme);
   const btn = document.getElementById('theme-btn');
   if (btn) btn.textContent = _isLightTheme ? '🌑' : '🌙';
-  sessionStorage.setItem('chief_theme', _isLightTheme ? 'light' : 'dark');
+  localStorage.setItem('chief_theme', _isLightTheme ? 'light' : 'dark');
 }
-window.addEventListener('load', () => {
-  const uri = window.location.origin + window.location.pathname;
-  const el = document.getElementById('redirect-uri-display');
-  if (el) el.textContent = uri;
-
-  const savedId = sessionStorage.getItem('ms_client_id');
-  if (savedId) {
-    const cidEl = document.getElementById('ms-client-id');
-    if (cidEl) cidEl.value = savedId;
-    const tid = sessionStorage.getItem('ms_tenant_id');
-    const tidEl = document.getElementById('ms-tenant-id');
-    if (tid && tidEl) tidEl.value = tid;
-  }
-
-  // Restore theme
-  if (sessionStorage.getItem('chief_theme') === 'light') {
+window.addEventListener('load', async () => {
+  // Restore theme immediately from local
+  if (localStorage.getItem('chief_theme') === 'light') {
     _isLightTheme = true;
     document.body.classList.add('light');
     const tb = document.getElementById('theme-btn');
     if (tb) tb.textContent = '🌑';
   }
 
-  // Init settings data
-  loadDomains();
-  loadManualProjects();
-  loadManualStatus();
-  renderDomainList();
+  // Restore MS credentials (local only for security)
+  const creds = loadMSCreds();
+  const cidEl = document.getElementById('ms-client-id');
+  const tidEl = document.getElementById('ms-tenant-id');
+  if (creds.clientId && cidEl) cidEl.value = creds.clientId;
+  if (creds.tenantId && tidEl) tidEl.value = creds.tenantId;
 
-  // Load minutes library
+  // Show redirect URI
+  const uri = window.location.origin + window.location.pathname;
+  const el = document.getElementById('redirect-uri-display');
+  if (el) el.textContent = uri;
+
+  // Load all settings from Supabase (cross-device persistent)
   try {
-    const saved = sessionStorage.getItem('minutes_library');
-    if (saved) { window._minutesLibrary = JSON.parse(saved); refreshMinutesLibraryUI(); }
-  } catch {}
+    toast('Loading your settings...');
+    await Promise.all([
+      loadManualStatus(),
+      loadDomains(),
+      loadManualProjects(),
+      loadMTData(),
+      loadReviewStamps(),
+      loadMinutesFromDB()
+    ]);
+    renderDomainChips();
+    renderMTList();
+    renderExcludedList();
+    if (window._minutesLibrary?.length > 0) refreshMinutesLibraryUI();
+    toast('✓ Settings loaded from Supabase');
+  } catch(e) {
+    console.warn('Supabase load error:', e);
+    toast('⚠ Using local settings — check Supabase connection');
+  }
 
-  // Load minute taker data
-  loadMTData();
-  renderMTList();
-  renderExcludedList();
-
-  // Load project review timestamps
-  loadReviewStamps();
-
-  // Init dashboard metric click handlers
   initDashMetrics();
 });
 
