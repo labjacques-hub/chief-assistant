@@ -3550,49 +3550,72 @@ function toggleTheme() {
   if (btn) btn.textContent = _isLightTheme ? '🌑' : '🌙';
   localStorage.setItem('chief_theme', _isLightTheme ? 'light' : 'dark');
 }
-window.addEventListener('load', async () => {
-  // Restore theme immediately from local
-  if (localStorage.getItem('chief_theme') === 'light') {
-    _isLightTheme = true;
-    document.body.classList.add('light');
-    const tb = document.getElementById('theme-btn');
-    if (tb) tb.textContent = '🌑';
+window.addEventListener('load', () => {
+  // ── Step 1: Immediate sync setup (no async, no waiting) ──
+  try {
+    // Theme
+    if (localStorage.getItem('chief_theme') === 'light') {
+      _isLightTheme = true;
+      document.body.classList.add('light');
+      const tb = document.getElementById('theme-btn');
+      if (tb) tb.textContent = '🌑';
+    }
+
+    // MS credentials
+    const creds = loadMSCreds();
+    const cidEl = document.getElementById('ms-client-id');
+    const tidEl = document.getElementById('ms-tenant-id');
+    if (creds.clientId && cidEl) cidEl.value = creds.clientId;
+    if (creds.tenantId && tidEl) tidEl.value = creds.tenantId;
+
+    // Redirect URI display
+    const uri = window.location.origin + window.location.pathname;
+    const rEl = document.getElementById('redirect-uri-display');
+    if (rEl) rEl.textContent = uri;
+
+    // Local fallbacks — load from localStorage immediately so UI works
+    try { _manualStatus = JSON.parse(localStorage.getItem('sb_proj_manual_status') || '{}'); } catch { _manualStatus = {}; }
+    try { _excludedCategories = new Set(JSON.parse(localStorage.getItem('sb_proj_excluded') || '[]')); } catch { _excludedCategories = new Set(); }
+    try { _myDomains = JSON.parse(localStorage.getItem('sb_my_domains') || JSON.stringify(['finex','finexmoney','imaliexpress'])); } catch {}
+    try { _manualProjects = JSON.parse(localStorage.getItem('sb_manual_projects') || '[]'); } catch { _manualProjects = []; }
+    try { _minuteTakers = JSON.parse(localStorage.getItem('sb_minute_takers') || '[]'); } catch { _minuteTakers = []; }
+    try { _mtExclusions = JSON.parse(localStorage.getItem('sb_mt_exclusions') || '{}'); } catch { _mtExclusions = {}; }
+    try { _projReviewStamps = JSON.parse(localStorage.getItem('sb_proj_review_stamps') || '{}'); } catch { _projReviewStamps = {}; }
+    try {
+      const saved = localStorage.getItem('minutes_library');
+      if (saved) window._minutesLibrary = JSON.parse(saved);
+    } catch {}
+
+    // Render UI with local data immediately
+    renderDomainChips();
+    renderMTList();
+    renderExcludedList();
+    if (window._minutesLibrary?.length > 0) refreshMinutesLibraryUI();
+    initDashMetrics();
+
+  } catch(e) {
+    console.error('Init error:', e);
   }
 
-  // Restore MS credentials (local only for security)
-  const creds = loadMSCreds();
-  const cidEl = document.getElementById('ms-client-id');
-  const tidEl = document.getElementById('ms-tenant-id');
-  if (creds.clientId && cidEl) cidEl.value = creds.clientId;
-  if (creds.tenantId && tidEl) tidEl.value = creds.tenantId;
-
-  // Show redirect URI
-  const uri = window.location.origin + window.location.pathname;
-  const el = document.getElementById('redirect-uri-display');
-  if (el) el.textContent = uri;
-
-  // Load all settings from Supabase (cross-device persistent)
-  try {
-    toast('Loading your settings...');
-    await Promise.all([
+  // ── Step 2: Sync from Supabase in background (non-blocking) ──
+  setTimeout(() => {
+    Promise.all([
       loadManualStatus(),
       loadDomains(),
       loadManualProjects(),
       loadMTData(),
       loadReviewStamps(),
       loadMinutesFromDB()
-    ]);
-    renderDomainChips();
-    renderMTList();
-    renderExcludedList();
-    if (window._minutesLibrary?.length > 0) refreshMinutesLibraryUI();
-    toast('✓ Settings loaded from Supabase');
-  } catch(e) {
-    console.warn('Supabase load error:', e);
-    toast('⚠ Using local settings — check Supabase connection');
-  }
-
-  initDashMetrics();
+    ]).then(() => {
+      renderDomainChips();
+      renderMTList();
+      renderExcludedList();
+      if (window._minutesLibrary?.length > 0) refreshMinutesLibraryUI();
+      toast('✓ Settings synced');
+    }).catch(e => {
+      console.warn('Supabase sync failed, using local data:', e);
+    });
+  }, 1000); // 1 second delay so UI is fully ready first
 });
 
 </script>
