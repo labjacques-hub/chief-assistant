@@ -1605,13 +1605,7 @@ function askDash() {
 let _projects = {};
 let _currentProjName = '';
 let _manualStatus = {}; // stores user overrides: { catName: 'active'|'quiet' }
-let _excludedCategories = new Set(); // person-name categories excluded by user
-// Persist overrides in sessionStorage
-function saveManualStatus() { localStorage.setItem('proj_manual_status', JSON.stringify(_manualStatus)); localStorage.setItem('proj_excluded', JSON.stringify([..._excludedCategories])); }
-function loadManualStatus() {
-  try { _manualStatus = JSON.parse(localStorage.getItem('proj_manual_status')||'{}'); } catch { _manualStatus = {}; }
-  try { _excludedCategories = new Set(JSON.parse(localStorage.getItem('proj_excluded')||'[]')); } catch { _excludedCategories = new Set(); }
-}
+let _excludedCategories = new Set();
 
 const OUTLOOK_COLOURS = {
   'preset0':'#e74856','preset1':'#ff8c00','preset2':'#f7630c',
@@ -2215,24 +2209,6 @@ function renderProjectEmails(p, overdueEmails, deadlineEmails) {
   }).join('');
 }
 
-// ── Project email review timestamps ──────────────────────
-// Stores { projectName: ISO timestamp } of last review
-let _projReviewStamps = {};
-
-function loadReviewStamps() {
-  try { _projReviewStamps = JSON.parse(localStorage.getItem('proj_review_stamps') || '{}'); } catch { _projReviewStamps = {}; }
-}
-function saveReviewStamps() {
-  localStorage.setItem('proj_review_stamps', JSON.stringify(_projReviewStamps));
-}
-function markProjectReviewed(name) {
-  _projReviewStamps[name] = new Date().toISOString();
-  saveReviewStamps();
-}
-function getLastReviewStamp(name) {
-  return _projReviewStamps[name] || null;
-}
-
 function generateProjectSummary() {
   // Use _currentProjName set by openOutlookProj
   const name = _currentProjName;
@@ -2455,18 +2431,6 @@ function initDashMetrics() {
 }
 
 // ── Minute Taker ─────────────────────────────────────────
-let _minuteTakers = [];       // [{name, email}]
-let _mtExclusions = {};       // { meetingTitle: true }
-let _calendarMeetings = [];   // current week's meetings
-
-function loadMTData() {
-  try { _minuteTakers = JSON.parse(localStorage.getItem('minute_takers') || '[]'); } catch { _minuteTakers = []; }
-  try { _mtExclusions = JSON.parse(localStorage.getItem('mt_exclusions') || '{}'); } catch { _mtExclusions = {}; }
-}
-function saveMTData() {
-  localStorage.setItem('minute_takers', JSON.stringify(_minuteTakers));
-  localStorage.setItem('mt_exclusions', JSON.stringify(_mtExclusions));
-}
 
 function renderMTList() {
   const el = document.getElementById('mt-list');
@@ -3241,13 +3205,7 @@ async function loadMSTasks() {
 }
 
 // ── DOMAIN FILTERING ─────────────────────────────────────
-// Emails from these domains are "internal" and won't appear in people lists
-let _myDomains = ['finex','finexmoney','imaliexpress'];
 
-function saveDomains() { localStorage.setItem('my_domains', JSON.stringify(_myDomains)); }
-function loadDomains() {
-  try { const d = JSON.parse(localStorage.getItem('my_domains')); if(d) _myDomains = d; } catch {}
-}
 function isInternalEmail(addr) {
   if (!addr) return true;
   const lower = addr.toLowerCase();
@@ -3396,11 +3354,6 @@ function setProjectStatus(name, newStatus) {
 }
 
 // ── MANUAL PROJECT CREATION ───────────────────────────────
-let _manualProjects = [];
-function loadManualProjects() {
-  try { _manualProjects = JSON.parse(localStorage.getItem('manual_projects')||'[]'); } catch { _manualProjects = []; }
-}
-function saveManualProjects() { localStorage.setItem('manual_projects', JSON.stringify(_manualProjects)); }
 
 function createManualProject() {
   const name = document.getElementById('new-proj-name').value.trim();
