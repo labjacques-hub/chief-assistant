@@ -728,8 +728,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
           <!-- Search + filter bar -->
           <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
-            <div style="flex:1;min-width:180px;position:relative">
-              <input type="text" id="proj-search" class="full" placeholder="🔍 Search projects..." oninput="filterProjects()" style="padding-left:12px;font-size:13px"/>
+            <div style="flex:1;min-width:180px;display:flex;gap:6px">
+              <input type="text" id="proj-search" class="full" placeholder="🔍 Search projects..." oninput="filterProjects()" style="font-size:13px"/>
+              <button class="btn btn-sm" onclick="document.getElementById('proj-search').value='';filterProjects();" title="Clear search">✕</button>
             </div>
             <div style="display:flex;gap:4px;flex-wrap:wrap" id="proj-status-filters">
               <button class="btn btn-sm proj-sf on" data-sf="all" onclick="setProjFilter('all',this)">All</button>
@@ -803,19 +804,16 @@ window.addEventListener('DOMContentLoaded', () => {
                 </div>
 
                 <!-- Action buttons — populated dynamically when project selected -->
-                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="proj-action-bar">
-                  <span style="font-size:12px;color:var(--muted);font-style:italic">Select a project to see actions</span>
-                </div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="proj-action-bar"></div>
 
-                <!-- AI quick summary -->
-                <div class="ai-box">
-                  <div class="ai-label">★ AI overview</div>
-                  <div class="ai-text thinking" id="proj-detail-text">Select a project to see AI-generated overview, next steps, blockers, and recommendations.</div>
-                </div>
-
-                <div class="input-row">
-                <input type="text" id="proj-input" placeholder="Ask a question, or tap Ask with no text for full summary..."/>
-                  <button class="btn btn-accent" onclick="askProj()">Ask</button>
+                <!-- Ask a specific question about this project -->
+                <div style="margin-top:8px">
+                  <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Ask a specific question about this project:</div>
+                  <div class="input-row">
+                    <input type="text" id="proj-input" placeholder="e.g. What is outstanding from last week?" onkeydown="if(event.key==='Enter')askProj()"/>
+                    <button class="btn btn-sm" onclick="document.getElementById('proj-input').value=''" title="Clear">✕</button>
+                    <button class="btn btn-accent" onclick="askProj()">Ask</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1642,24 +1640,9 @@ function renderProjectList() {
 }
 
 // ── Project click handler ─────────────────────────────────
-// Single click = select + quick overview
-// Double click = select + full summary
-let _lastClickTime = 0;
-let _lastClickName = '';
-
+// ONE click = select project + immediately generate full summary
 function handleProjClick(name) {
-  const now2 = Date.now();
-  const isDouble = (now2 - _lastClickTime < 400) && (_lastClickName === name);
-  _lastClickTime = now2;
-  _lastClickName = name;
-
-  if (isDouble) {
-    // Double click — open with full summary
-    openOutlookProj(name, true);
-  } else {
-    // Single click — select and show quick overview
-    openOutlookProj(name, false);
-  }
+  openOutlookProj(name, true); // always generate summary on click
 }
 
 function excludeCategory(name) {
@@ -1861,21 +1844,10 @@ function openOutlookProj(name, autoSummary = false) {
   const overdueNote = overdueEmails.length > 0 ? `\nOVERDUE (48h+ no reply): ${overdueEmails.map(e=>'"'+e.subject+'"').join(', ')}` : '';
   const deadlineNote = deadlineEmails.length > 0 ? `\nDEADLINE EMAILS: ${deadlineEmails.map(e=>'"'+e.subject+'"').join(', ')}` : '';
 
-  // Single click = quick AI overview; double-click = full comprehensive summary
-  if (autoSummary) {
-    // Scroll to show summary section first
-    setTimeout(() => {
-      document.getElementById('proj-summary-section').style.display = 'block';
-      document.getElementById('proj-summary-section').scrollIntoView({behavior:'smooth', block:'start'});
-    }, 200);
-    generateProjectSummary();
-  } else {
-    callClaude(
-      `Executive assistant. Project: "${name}". Status: ${p.status}.${overdueNote}${deadlineNote}\n\nEmails (${p.total} total, ${p.unread} unread):\n${emailSummary||'No emails'}\n\n${taskSummary?'Tasks:\n'+taskSummary:''}\n\nProvide:\n1. PROJECT OVERVIEW (2 sentences)\n2. CURRENT STATUS\n3. KEY PEOPLE & ROLES\n4. PENDING/OVERDUE ITEMS — flag any 48h+ unreplied emails\n5. DEADLINES — list any dates or deadlines found in emails\n6. NEXT STEPS (3 bullets)\n\nBe specific. Reference actual email subjects.`,
-      'proj-detail-text', null
-    );
-  }
+  // Always generate the full summary immediately on click — no double-click needed
+  generateProjectSummary();
 }
+
 
 function renderProjectEmails(p, overdueEmails, deadlineEmails) {
   const el = document.getElementById('proj-emails');
@@ -2097,20 +2069,12 @@ function openProj(name, desc, pct, status) {
 
 function askProj() {
   const q = document.getElementById('proj-input').value.trim();
-  // If no question typed and a project is selected, generate the full summary
-  if (!q) {
-    if (_currentProjName) {
-      generateProjectSummary();
-    } else {
-      toast('Select a project first, then tap Ask for a summary');
-    }
-    return;
-  }
+  if (!q) { toast('Type a specific question about this project'); return; }
+  if (!_currentProjName) { toast('Select a project first'); return; }
   const p = _projects[_currentProjName];
-  const ctx = p
-    ? `Project: "${_currentProjName}". People: ${Object.entries(p.people).filter(([a])=>!isInternalEmail(a)).map(([,n])=>n).slice(0,6).join(', ')}. ${p.total} emails, ${p.unread} unread. Status: ${p.status}. Recent emails: ${p.emails.slice(0,4).map(e=>`"${e.subject}"`).join(', ')}.`
-    : '';
-  callClaude(`${ctx}\n\nRequest: ${q}\n\nRespond as executive assistant, concisely.`, "proj-detail-text", null);
+  const emailCtx = p ? p.emails.slice(0,8).map(e=>`"${e.subject}" from ${e.from?.emailAddress?.name||'?'} on ${new Date(e.receivedDateTime).toLocaleDateString()}`).join('\n') : '';
+  const ctx = p ? `Project: "${_currentProjName}". Status: ${p.status}. ${p.total} emails.\nRecent emails:\n${emailCtx}` : '';
+  callClaude(`${ctx}\n\nSpecific question: ${q}\n\nAnswer directly and concisely.`, 'proj-detail-text', null);
   document.getElementById('proj-input').value = '';
 }
 
